@@ -1,0 +1,32 @@
+Package: dinemites
+Title: Distinguishing New Malaria Infections in Time Series
+Version: 0.0.1
+Authors@R: 
+    person("William", "Nickols", , "willnickols@g.harvard.edu", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0001-8214-9746"))
+Author: William Nickols <willnickols@g.harvard.edu>
+Maintainer: William Nickols <willnickols@g.harvard.edu>
+Description: DiNeMITeS implements a variety of models for distinguishing new from persistent infections in longitudinal, optionally multi-allele or multi-locus, malaria infection data.
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Biarch: true
+Depends: 
+    R (>= 3.4.0)
+Imports: 
+    Rcpp (>= 0.12.0),
+    RcppParallel (>= 5.0.1),
+    methods,
+    rstan (>= 2.32.6),
+    rstantools (>= 2.4.0),
+    dplyr, linkcomm, purrr, reshape2, tidyr, posterior, instantiate, foreach, doParallel
+LinkingTo: 
+    BH (>= 1.66.0),
+    Rcpp (>= 0.12.0),
+    RcppEigen (>= 0.3.3.3.0),
+    RcppParallel (>= 5.0.1),
+    StanHeaders (>= 2.18.0),
+    rstan (>= 2.18.1)
+SystemRequirements: GNU make
+Additional_repositories: https://mc-stan.org/r-packages/
