@@ -4,8 +4,6 @@ Version: 0.0.1
 Authors@R: 
     person("William", "Nickols", , "willnickols@g.harvard.edu", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0001-8214-9746"))
-Author: William Nickols <willnickols@g.harvard.edu>
-Maintainer: William Nickols <willnickols@g.harvard.edu>
 Description: DiNeMITeS implements a variety of models for distinguishing new from persistent infections in longitudinal, optionally multi-allele or multi-locus, malaria infection data.
 License: GPL (>= 3)
 Encoding: UTF-8
