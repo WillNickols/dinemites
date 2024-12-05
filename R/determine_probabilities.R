@@ -43,7 +43,7 @@ determine_probabilities_simple <- function(dataset, n_lags = 3) {
         dplyr::arrange(time) %>%
         dplyr::mutate(
             # Combine results from dynamically applied lags
-            recent_present = reduce(
+            recent_present = purrr::reduce(
                 purrr::map(1:n_lags, ~ lag(present, .x, default = 0) == 1),
                 `|`
             ),
@@ -528,13 +528,17 @@ determine_probabilities_clustering <- function(dataset,
             alleles_in_clusters = alleles_in_clusters
         )
 
-        # Fit the model
-        fit <- rstan::optimizing(stanmodels$model_infection_probabilities_clustering,
-                                data = stan_data,
-                                seed = seed,
-                                refresh = refresh)
+        mod <- instantiate::stan_package_model(name = "model_infection_probabilities_clustering", package = "dinemites")
 
-        output_draws <- as.data.frame(fit)
+        # Fit the model
+        fit <- mod$optimize(
+            data = stan_data,
+            seed = seed,
+            refresh = refresh,
+            show_messages = F
+        )
+
+        output_draws <- data.frame(posterior::as_draws_df(fit$draws()), check.names = F)
 
         prob_cluster_in_time = matrix(unlist(output_draws[grepl("prob_cluster_in_time", colnames(output_draws))]),
                                       nrow = n_times, ncol = C)

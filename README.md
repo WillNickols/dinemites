@@ -12,5 +12,7 @@ conda env create -f dinemites.yml
 
 ```
 install.packages('devtools')
+devtools::install_github('WillNickols/dinemites', type = 'source')
 install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
+cmdstanr::install_cmdstan()
 ```
