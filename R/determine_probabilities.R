@@ -822,7 +822,7 @@ impute_dataset <- function(dataset,
         arrange(subject, allele, time)
 
     cat(paste0("Creating imputations"))
-    cl <- makeCluster(n_cores)
+    cl <- parallel::makeCluster(n_cores)
     registerDoParallel(cl)
 
     imputation_mat <- matrix(nrow = nrow(dataset), ncol = n_imputations)
