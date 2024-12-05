@@ -225,9 +225,9 @@ determine_probabilities_bayesian <- function(dataset,
 
     # Compile the model
     if (!drop_out) {
-        mod <- stan_package_model(name = "model_infection_probabilities_bayesian", package = "dinemites")
+        mod <- instantiate::stan_package_model(name = "model_infection_probabilities_bayesian", package = "dinemites")
     } else {
-        mod <- stan_package_model(name = "model_infection_probabilities_bayesian_drop_out", package = "dinemites")
+        mod <- instantiate::stan_package_model(name = "model_infection_probabilities_bayesian_drop_out", package = "dinemites")
     }
 
 
@@ -413,7 +413,7 @@ determine_probabilities_clustering <- function(dataset,
 
     dataset$allele <- factor(dataset$allele)
 
-    mod <- stan_package_model(name = "model_infection_probabilities_clusters", package = "dinemites")
+    mod <- instantiate::stan_package_model(name = "model_infection_probabilities_clusters", package = "dinemites")
 
     dataset$probabilities <- 0
     for (subject_name in unique(dataset$subject)) {
