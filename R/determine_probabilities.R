@@ -894,7 +894,7 @@ impute_dataset <- function(dataset,
     }
 
     # Stop the cluster
-    stopCluster(cl)
+    parallel::stopCluster(cl)
 
     return(imputation_mat)
 }
