@@ -528,8 +528,6 @@ determine_probabilities_clustering <- function(dataset,
             alleles_in_clusters = alleles_in_clusters
         )
 
-        mod <- instantiate::stan_package_model(name = "model_infection_probabilities_clustering", package = "dinemites")
-
         # Fit the model
         fit <- mod$optimize(
             data = stan_data,
