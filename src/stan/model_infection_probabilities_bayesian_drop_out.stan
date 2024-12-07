@@ -71,28 +71,26 @@ model {
     vector[N] logit_p_any_infection = logit_p_new_infection + X_infection_persistent * beta_infection_persistent;
 
     for (n in 1:N) {
-        if (z[n] == 1) {
-            // Calculate infection probabilities
-            real p_new_infection = inv_logit(logit_p_new_infection[n]);
-            real p_any_infection = inv_logit(logit_p_any_infection[n]);
-            real p_old_infection = (p_any_infection - p_new_infection) / (1 - p_new_infection);
+        // Calculate infection probabilities
+        real p_new_infection = inv_logit(logit_p_new_infection[n]);
+        real p_any_infection = inv_logit(logit_p_any_infection[n]);
+        real p_old_infection = (p_any_infection - p_new_infection) / (1 - p_new_infection);
 
-            // Allele-related probabilities
-            real p_allele_if_new = inv_logit(alpha_alleles_new[group[n]]);
-            real p_allele_if_old;
+        // Allele-related probabilities
+        real p_allele_if_new = inv_logit(alpha_alleles_new[group[n]]);
+        real p_allele_if_old;
 
-            if (sum(abs(X_alleles_persistent[n])) > 0) {
-                p_allele_if_old = inv_logit(dot_product(X_alleles_persistent[n], beta_alleles_old[group[n]]));
-            } else {
-                p_allele_if_old = inv_logit(alpha_alleles_new[group[n]]) * drop_out[group[n]];
-            }
-
-            // Final allele infection probabilities
-            real p_allele_new = p_allele_if_new * p_new_infection;
-            real p_allele_old = p_allele_if_old * p_old_infection;
-
-            // Likelihood for y[n]
-            target += w[n] * bernoulli_lpmf(y[n] | (p_allele_new + p_allele_old - p_allele_new * p_allele_old) / p_any_infection);
+        if (sum(abs(X_alleles_persistent[n])) > 0) {
+            p_allele_if_old = inv_logit(dot_product(X_alleles_persistent[n], beta_alleles_old[group[n]]));
+        } else {
+            p_allele_if_old = inv_logit(alpha_alleles_new[group[n]]) * drop_out[group[n]];
         }
+
+        // Final allele infection probabilities
+        real p_allele_new = p_allele_if_new * p_new_infection;
+        real p_allele_old = p_allele_if_old * p_old_infection;
+
+        // Likelihood for y[n]
+        target += w[n] * bernoulli_lpmf(y[n] | (p_allele_new + p_allele_old - p_allele_new * p_allele_old) / p_any_infection);
     }
 }
