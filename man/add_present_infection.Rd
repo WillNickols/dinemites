@@ -7,11 +7,23 @@
 add_present_infection(dataset)
 }
 \arguments{
-\item{dataset}{dataset}
+\item{dataset}{A complete longitudinal dataset with columns \code{allele},
+\code{subject}, \code{time}, and \code{present.}}
 }
 \value{
-return
+The dataset with a new column \code{present_infection} (0/1) indicating
+whether an infection is present at the time
 }
 \description{
-add_present_infection
+Add a column with an indicator of whether an infection is present at the time
+}
+\examples{
+
+dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
+    subject = rep('A', 5),
+    time = c(1, 1, 2, 3, 4))
+
+dataset <- fill_in_dataset(dataset_in)
+dataset <- add_present_infection(dataset)
+
 }

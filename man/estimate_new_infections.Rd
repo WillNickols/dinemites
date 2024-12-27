@@ -7,11 +7,34 @@
 estimate_new_infections(dataset)
 }
 \arguments{
-\item{dataset}{dataset}
+\item{dataset}{A complete longitudinal dataset with columns \code{allele},
+\code{subject}, \code{time}, \code{present}, \code{probability_new}, and
+\code{probability_present} if using imputed data.}
 }
 \value{
-return
+A dataframe with a \code{subject} column and a \code{new_infections} column
+#' @examples
+
+library(dplyr)
+dataset_in <- data.frame(
+locus = rep(c(1, 2), each = 5),
+allele = c('A', 'B', 'B', NA, NA, 'A', 'A', 'B', NA, NA),
+subject = rep('A', 10),
+time = rep(c(1, 1, 5, 15, 44), 2)) \%>\%
+mutate(allele = interaction(allele, locus))
+treatments <- data.frame(subject = c('A', 'B'),
+time = c(1, 29))
+
+dataset <- fill_in_dataset(dataset_in)
+dataset <- dataset \%>\%
+arrange(time, subject, allele)
+
+dataset$probability_new <-
+determine_probabilities_simple(dataset)$probability_new
+
+estimate_new_infections(dataset)
 }
 \description{
-estimate_new_infections
+Compute the total new infection events for each subject by identifying
+peaks in the pan-locus new COI
 }

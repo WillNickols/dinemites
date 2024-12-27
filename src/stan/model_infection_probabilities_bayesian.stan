@@ -19,7 +19,7 @@ data {
 parameters {
     real mu_alpha_alleles_new;
     real<lower=0> sigma_alpha_alleles_new;
-    vector<lower=0>[K_alleles_persistent] mu_alleles_old;
+    vector[K_alleles_persistent] mu_alleles_old;
     vector<lower=0>[K_alleles_persistent] sigma_alleles_old;
 
     real alpha_infection;

@@ -13,19 +13,46 @@ add_treatment_column(
 )
 }
 \arguments{
-\item{dataset}{dataset}
+\item{dataset}{A complete longitudinal dataset with columns \code{allele},
+\code{subject}, \code{time}, and \code{present}}
 
-\item{treatments}{treatments}
+\item{treatments}{A data.frame of treatments with columns \code{subject} and
+\code{time}}
 
-\item{treatment_acute_start}{treatment_acute_start}
+\item{treatment_acute_start}{Number of days after the treatment at which
+to mark the start of the acute treatment phase, corresponding to when
+variants are being cleared but might still be detected.}
 
-\item{treatment_longitudinal_start}{treatment_longitudinal_start}
+\item{treatment_longitudinal_start}{Number of days after the treatment
+at which to mark the start of the longitudinal treatment phase, corresponding
+to when cleared variants will no longer be detected.}
 
-\item{verbose}{verbose}
+\item{verbose}{Print an update ever 10 subjects since this function can
+take some time.}
 }
 \value{
-return
+The dataset with new columns \code{treatment_acute} and
+\code{treatment_longitudinal} (0/1) indicating that the allele was treated in
+the last \code{treatment_longitudinal_start} days (acute) or ever (longitudinal).
+Columns for \code{persistent} and \verb{lag_[#]} will be set to 0 for the allele
+after treatment until the next infection.
 }
 \description{
-add_treatment_column
+Add columns with indicators of whether there is acute or longitudinal
+(any previous) treatment for the allele
+}
+\examples{
+
+dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
+     subject = rep('A', 5),
+     time = c(1, 1, 5, 15, 44))
+treatments <- data.frame(subject = c('A', 'B'),
+                         time = c(1, 29))
+
+dataset <- fill_in_dataset(dataset_in)
+dataset <- add_present_infection(dataset)
+dataset <- add_persistent_column(dataset)
+dataset <- add_lag_column(dataset)
+dataset <- add_treatment_column(dataset, treatments)
+
 }

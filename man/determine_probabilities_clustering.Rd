@@ -7,15 +7,25 @@
 determine_probabilities_clustering(dataset, refresh = 100, seed = 1)
 }
 \arguments{
-\item{dataset}{dataset}
+\item{dataset}{A complete longitudinal dataset with columns allele, subject,
+time, and present. All alleles must be included in the dataset for each
+subject and at each time. The dataset should  be arranged in the order:
+time, subject, allele.}
 
-\item{refresh}{refresh}
+\item{refresh}{Stan updates will be printed every \code{refresh} steps}
 
-\item{seed}{seed}
+\item{seed}{Random seed for Stan}
 }
 \value{
-An list with probabilities
+A named list with (1) \code{probability_new} as a 0/1 vector of whether
+the corresponding allele in the dataset was from a new infection and (2)
+\code{fit} as the resulting parameters from the likelihood maximization
+procedure.
 }
 \description{
-determine_probabilities_clustering
+Determine whether an allele is new or persistent using a clustering model.
+Alleles are clustered according to co-occurrence, and the probability of
+each allele occurring in each cluster and each cluster occurring at each time
+is found through a likelihood maximization procedure. These probabilities
+are used to estimate the probability an infection is new.
 }

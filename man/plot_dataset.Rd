@@ -4,22 +4,59 @@
 \alias{plot_dataset}
 \title{plot_dataset}
 \usage{
-plot_dataset(dataset, output, treatments = NULL, height = 6, width = 8)
+plot_dataset(
+  dataset,
+  treatments = NULL,
+  no_imputation = FALSE,
+  output = NULL,
+  height = 6,
+  width = 8
+)
 }
 \arguments{
-\item{output}{output}
+\item{dataset}{A complete longitudinal dataset with columns \code{allele},
+\code{subject}, \code{time}, and \code{present}. To plot imputations,
+\code{probability_present} should be a column. To plot probabilities alleles
+are new, \code{probability_new} should be a column. To display allele
+prevalence, \code{prevalence} should be a column.}
 
-\item{treatments}{treatments}
+\item{treatments}{A data.frame of treatments with columns \code{subject} and
+\code{time}.}
 
-\item{height}{height}
+\item{no_imputation}{Disregard qPCR-only times by setting times with
+\code{present == 2} to \code{present = 0}.}
 
-\item{width}{width}
+\item{output}{Folder to which the plots should be saved}
 
-\item{subject}{subject}
+\item{height}{Height of the output plot}
+
+\item{width}{Width of the output plot}
 }
 \value{
-return
+A list of plot object from ggplot2 showing each per-subject
+infection course. These are also saved by subject name in the \code{output}
+folder.
 }
 \description{
-plot_dataset
+Compute allele prevalences and then call \code{plot_single_subject} for every
+subject in a dataset and save the results.
+}
+\examples{
+
+library(dplyr)
+dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
+     subject = rep('A', 5),
+     time = c(1, 1, 5, 15, 44))
+treatments <- data.frame(subject = c('A', 'B'),
+                         time = c(1, 29))
+
+dataset <- fill_in_dataset(dataset_in)
+dataset <- dataset \%>\%
+   arrange(time, subject, allele)
+
+dataset$probability_new <-
+    determine_probabilities_simple(dataset)$probability_new
+
+plot_dataset(dataset, treatments)
+
 }

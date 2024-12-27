@@ -4,16 +4,30 @@
 \alias{estimate_drop_out}
 \title{estimate_drop_out}
 \usage{
-estimate_drop_out(dataset, allowed_ordered_time_difference = 6)
+estimate_drop_out(dataset, gap_size = 3)
 }
 \arguments{
-\item{dataset}{dataset}
+\item{dataset}{A complete longitudinal dataset with columns \code{allele},
+\code{subject}, \code{time}, and \code{present}}
 
-\item{allowed_ordered_time_difference}{allowed_ordered_time_difference}
+\item{gap_size}{Alleles with first and last occurrences separated by
+at most \code{gap_size} will be included in the estimation}
 }
 \value{
-return
+Numeric vector with the estimated drop-out rate, the number of
+gap positions evaluated, and the number of alleles present in those gaps
 }
 \description{
-estimate_drop_out
+Estimate the sequencing drop-out rate in a dataset by selecting alleles
+with close times of first and last occurrence and checking how often the
+allele is observed in between.
+}
+\examples{
+dataset_in <- data.frame(allele = c('A', 'B', NA, 'A', 'A'),
+    subject = rep('A', 5),
+    time = c(1, 1, 14, 28, 42))
+
+dataset <- fill_in_dataset(dataset_in)
+estimate_drop_out(dataset)
+
 }

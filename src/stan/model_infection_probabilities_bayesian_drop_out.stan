@@ -21,7 +21,7 @@ parameters {
     real<lower=0> sigma_alpha_alleles_new;
     real<lower=0> a_drop_out;
     real<lower=0> b_drop_out;
-    vector<lower=0>[K_alleles_persistent] mu_alleles_old;
+    vector[K_alleles_persistent] mu_alleles_old;
     vector<lower=0>[K_alleles_persistent] sigma_alleles_old;
 
     real alpha_infection;
@@ -91,6 +91,6 @@ model {
         real p_allele_old = p_allele_if_old * p_old_infection;
 
         // Likelihood for y[n]
-        target += w[n] * bernoulli_lpmf(y[n] | (p_allele_new + p_allele_old - p_allele_new * p_allele_old) / p_any_infection);
+        target += w[n] * bernoulli_lpmf(y[n] | (p_allele_new + p_allele_old - p_allele_new * p_allele_old));
     }
 }

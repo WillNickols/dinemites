@@ -1,20 +1,55 @@
-#' compute_total_new_molFOI
+#' compute_total_new_COI
+#'
+#' Compute the total new COI deduplicated across loci for each subject by
+#' either summing across the loci and taking the max or maximizing the
+#' diversity on each day and then summing the maxima.
 #'
 #' @export
-#' @param dataset dataset
-#' @param method method
-#' @return return
+#' @param dataset A complete longitudinal dataset with columns `allele`,
+#' `subject`, `time`, `present`, `locus`, `probability_new`, and
+#' `probability_present` if using imputed data.
+#' @param method Whether to sum the per-locus COI across all time points for
+#' each locus and then take the maximum (`sum_then_max`) or take the maximum
+#' per-locus COI at each time point across the loci and then sum the maxima
+#' (`max_then_sum`).
+#' @return A dataframe with a `subject` column and a `new_COI` column
+#' @examples
+#'
+#' library(dplyr)
+#' dataset_in <- data.frame(
+#'     locus = rep(c(1, 2), each = 5),
+#'     allele = c('A', 'B', 'B', NA, NA, 'A', 'A', 'B', NA, NA),
+#'     subject = rep('A', 10),
+#'     time = rep(c(1, 1, 5, 15, 44), 2)) %>%
+#'     mutate(allele = interaction(allele, locus))
+#' treatments <- data.frame(subject = c('A', 'B'),
+#'                          time = c(1, 29))
+#'
+#' dataset <- fill_in_dataset(dataset_in)
+#' dataset <- dataset %>%
+#'     arrange(time, subject, allele)
+#'
+#' dataset$probability_new <-
+#'     determine_probabilities_simple(dataset)$probability_new
+#'
+#' compute_total_new_COI(dataset, method = 'sum_then_max')
+#' compute_total_new_COI(dataset, method = 'max_then_sum')
+#'
 #' @import dplyr
 #'
-compute_total_new_molFOI <- function(dataset, method = 'sum_then_max') {
-    if (any(!c("allele", "locus", "subject", "time", "present", "probability_new") %in%
+compute_total_new_COI <- function(dataset, method = 'sum_then_max') {
+    if (any(!c("allele", "locus", "subject",
+               "time", "present", "probability_new") %in%
             colnames(dataset))) {
-        stop("dataset must contain the columns:
-             allele, locus, subject, time, present, probability_new")
+        stop(paste0("dataset must contain the columns:",
+             " allele, locus, subject, time, present, probability_new"))
     }
 
+    check_alleles_unique_across_loci(dataset)
+
     if (!'probability_present' %in% colnames(dataset)) {
-        warning("probability_present not in colnames(dataset), using present == 1")
+        message(paste0("probability_present not in colnames(dataset), ",
+                       "using present == 1"))
         dataset$probability_present <- ifelse(dataset$present == 1, 1, 0)
     }
 
@@ -23,45 +58,99 @@ compute_total_new_molFOI <- function(dataset, method = 'sum_then_max') {
     }
 
     if (method == 'sum_then_max') {
-        new_molFOI_out <- dataset %>%
-            dplyr::group_by(subject, locus, time) %>%
-            dplyr::summarise(sum_first = sum(probability_present * probability_new, na.rm=T)) %>%
-            dplyr::group_by(subject, locus) %>%
-            dplyr::summarise(sum_second = sum(sum_first, na.rm = T)) %>%
-            dplyr::group_by(subject) %>%
-            dplyr::summarise(new_molFOI = max(sum_second, 0, na.rm=T))
+        new_COI_out <- dataset %>%
+            dplyr::group_by(.data$subject, .data$locus, .data$time) %>%
+            dplyr::summarise(
+                sum_first = sum(.data$probability_present *
+                                    .data$probability_new, na.rm=T)) %>%
+            dplyr::group_by(.data$subject, .data$locus) %>%
+            dplyr::summarise(sum_second = sum(.data$sum_first, na.rm = T)) %>%
+            dplyr::group_by(.data$subject) %>%
+            dplyr::summarise(new_COI = max(.data$sum_second, 0, na.rm=T))
     } else if (method == 'max_then_sum') {
-        new_molFOI_out <- dataset %>%
-            dplyr::group_by(subject, locus, time) %>%
-            dplyr::summarise(sum_first = sum(probability_present * probability_new, na.rm=T)) %>%
-            dplyr::group_by(subject, time) %>%
-            dplyr::summarise(max_second = max(sum_first, 0, na.rm = T)) %>%
-            dplyr::group_by(subject) %>%
-            dplyr::summarise(new_molFOI = sum(max_second, na.rm=T))
+        new_COI_out <- dataset %>%
+            dplyr::group_by(.data$subject, .data$locus, .data$time) %>%
+            dplyr::summarise(
+                sum_first = sum(.data$probability_present *
+                                    .data$probability_new, na.rm=T)) %>%
+            dplyr::group_by(.data$subject, .data$time) %>%
+            dplyr::summarise(
+                max_second = max(.data$sum_first, 0, na.rm = T)) %>%
+            dplyr::group_by(.data$subject) %>%
+            dplyr::summarise(new_COI = sum(.data$max_second, na.rm=T))
     }
 
-    return(new_molFOI_out)
+    return(new_COI_out)
 }
 
-count_local_maxima <- function(total_new, max_new) {
-    if (length(total_new) < 2) {
-        return(min(max_new[1], 1))
+# Count new infections using the algorithm described in the manuscript
+count_new_infections <- function(total_new,
+                                 max_new,
+                                 max_new_weighted,
+                                 min_new,
+                                 min_new_weighted,
+                                 max_prob) {
+    if (length(total_new) == 0) {
+        return(0)
     }
+
+    if (length(total_new) == 1) {
+        return(max_new[1])
+    }
+
+    # Define peaks and troughs
+    peak_trough_regions <- list()
+    current_region <- 1
+
+    if (length(total_new) > 2) {
+        for (i in 2:(length(total_new) - 1)) {
+            if (total_new[i] < total_new[i - 1] &&
+                total_new[i] <= total_new[i + 1] &
+                (max(total_new[current_region]) -
+                 min(total_new[c(current_region, i)]) >= 1)) {
+                peak_trough_regions <-
+                    append(peak_trough_regions, list(current_region))
+                current_region <- i
+            } else {
+                current_region <- c(current_region, i)
+            }
+        }
+    }
+
+    current_region <- c(current_region, length(total_new))
+    peak_trough_regions <- append(peak_trough_regions, list(current_region))
+    # End peaks and troughs
 
     count <- 0
-    # Check first
-    if (total_new[1] > total_new[2]) {
-        count <- count + min(max_new[1], 1)
-    }
+    for (peak_trough_region in peak_trough_regions) {
+        first_certain_index <- min(which(max_prob[peak_trough_region] == 1),
+                                   length(peak_trough_region) + 1)
+        if (first_certain_index <=
+            length(peak_trough_region) & first_certain_index > 1) {
+            max_new_used <-
+                c(max_new_weighted[peak_trough_region][
+                    1:(first_certain_index - 1)],
+                  max_new[peak_trough_region][
+                      first_certain_index:length(peak_trough_region)])
+            min_new_used <-
+                c(min_new_weighted[peak_trough_region][
+                    1:(first_certain_index - 1)],
+                  min_new[peak_trough_region][
+                      first_certain_index:length(peak_trough_region)])
+        } else {
+            max_new_used <- max_new[peak_trough_region]
+            min_new_used <- min_new[peak_trough_region]
+        }
 
-    # Check last
-    if (total_new[length(total_new)] > total_new[length(total_new) - 1]) {
-        count <- count + min(max_new[length(total_new)], 1)
-    }
-
-    for (i in 2:(length(total_new) - 1)) {
-        if (total_new[i] > total_new[i-1] && total_new[i] > total_new[i+1]) {
-            count <- count + min(max_new[i], 1)
+        if (length(min_new_used) != length(peak_trough_region)) {
+            stop(paste0(length(min_new_used), " ", length(peak_trough_region)))
+        }
+        if (max(total_new[peak_trough_region]) >= 1) {
+            max_new_index <- which.max(max_new_used)
+            count <- count + max_new_used[max_new_index]
+            count <- count + sum(min_new_used[-max_new_index])
+        } else {
+            count <- count + max(min_new_used)
         }
     }
 
@@ -70,36 +159,107 @@ count_local_maxima <- function(total_new, max_new) {
 
 #' estimate_new_infections
 #'
+#' Compute the total new infection events for each subject by identifying
+#' peaks in the pan-locus new COI
+#'
 #' @export
-#' @param dataset dataset
-#' @return return
+#' @param dataset A complete longitudinal dataset with columns `allele`,
+#' `subject`, `time`, `present`, `probability_new`, and
+#' `probability_present` if using imputed data.
+#' @return A dataframe with a `subject` column and a `new_infections` column
+#' #' @examples
+#'
+#' library(dplyr)
+#' dataset_in <- data.frame(
+#'     locus = rep(c(1, 2), each = 5),
+#'     allele = c('A', 'B', 'B', NA, NA, 'A', 'A', 'B', NA, NA),
+#'     subject = rep('A', 10),
+#'     time = rep(c(1, 1, 5, 15, 44), 2)) %>%
+#'     mutate(allele = interaction(allele, locus))
+#' treatments <- data.frame(subject = c('A', 'B'),
+#'                          time = c(1, 29))
+#'
+#' dataset <- fill_in_dataset(dataset_in)
+#' dataset <- dataset %>%
+#'     arrange(time, subject, allele)
+#'
+#' dataset$probability_new <-
+#'     determine_probabilities_simple(dataset)$probability_new
+#'
+#' estimate_new_infections(dataset)
+#'
 #' @import dplyr
 #'
 estimate_new_infections <- function(dataset) {
     if (any(!c("allele", "subject", "time", "present", "probability_new") %in%
             colnames(dataset))) {
-        stop("dataset must contain the columns:
-             allele, subject, time, present, probability_new")
+        stop(paste0("dataset must contain the columns:",
+             " allele, subject, time, present, probability_new"))
     }
 
     if (!'probability_present' %in% colnames(dataset)) {
-        warning("probability_present not in colnames(dataset), using present == 1")
+        message(paste0("probability_present not in colnames(dataset),",
+                       " using present == 1"))
         dataset$probability_present <- ifelse(dataset$present == 1, 1, 0)
     }
 
+    check_alleles_unique_across_loci(dataset)
+
     new_infections <- dataset %>%
         dplyr::group_by(.data$subject, .data$time) %>%
-        dplyr::summarise(total_new = sum((probability_present * probability_new)[probability_present > 0]),
-                         max_new = ifelse(max(probability_present) > 0.1,
-                                          max(probability_new[probability_present > 0.1], 0),
-                                          max(probability_new[probability_present > 0], 0))) %>%
-        dplyr::mutate(total_new = ifelse(is.na(total_new), 0, total_new),
-                      max_new = ifelse(is.na(max_new), 0, max_new)) %>%
+        dplyr::summarise(
+            total_new = sum((.data$probability_present * .data$probability_new)[
+                .data$probability_present > 0]),
+             max_new = ifelse(
+                 max(.data$probability_present) > 0.1,
+                 max(.data$probability_new[.data$probability_present > 0.1], 0),
+                 max(.data$probability_new[.data$probability_present > 0], 0)),
+             max_new_weighted =
+                ifelse(max(.data$probability_present) > 0.1,
+                   max(.data$probability_new[.data$probability_present > 0.1] *
+                           .data$probability_present[
+                               .data$probability_present > 0.1], 0),
+                   max(.data$probability_new[
+                       .data$probability_present > 0], 0)),
+             min_new =
+                ifelse(max(.data$probability_present) > 0.1,
+                    max(min(.data$probability_new[
+                        .data$probability_present > 0.1], 2), 0),
+                    max(min(.data$probability_new[
+                        .data$probability_present > 0], 2), 0)),
+             min_new_weighted =
+                ifelse(max(.data$probability_present) > 0.1,
+                       max(min(.data$probability_new[
+                           .data$probability_present > 0.1] *
+                               .data$probability_present[
+                                   .data$probability_present > 0.1], 2), 0),
+                       max(min(.data$probability_new[
+                           .data$probability_present > 0], 2), 0)),
+             max_prob = max(.data$probability_present)) %>%
+        dplyr::mutate(min_new = ifelse(.data$min_new == 2, 0, .data$min_new)) %>%
+        dplyr::mutate(
+            min_new_weighted = ifelse(.data$min_new_weighted == 2,
+                                      0, .data$min_new_weighted)) %>%
+        dplyr::mutate(
+            max_new = ifelse(is.na(.data$max_new), 0, .data$max_new),
+            max_new_weighted = ifelse(is.na(.data$max_new_weighted),
+                                      0, .data$max_new_weighted),
+            min_new = ifelse(is.na(.data$min_new), 0, .data$min_new),
+            min_new_weighted =
+                ifelse(is.na(.data$min_new_weighted),
+                       0, .data$min_new_weighted),
+            max_prob = ifelse(is.na(.data$max_prob), 0, .data$max_prob)) %>%
         dplyr::ungroup() %>%
         dplyr::group_by(.data$subject) %>%
         dplyr::arrange(.data$time) %>%
-        dplyr::summarise(new_infections = count_local_maxima(.data$total_new[!is.na(.data$total_new)],
-                                                                  .data$max_new[!is.na(.data$total_new)]))
+        dplyr::summarise(
+            new_infections = count_new_infections(
+                .data$total_new[!is.na(.data$total_new)],
+                .data$max_new[!is.na(.data$total_new)],
+                .data$max_new_weighted[!is.na(.data$total_new)],
+                .data$min_new[!is.na(.data$total_new)],
+                .data$min_new_weighted[!is.na(.data$total_new)],
+                .data$max_prob[!is.na(.data$total_new)]))
 
     return(new_infections)
 }

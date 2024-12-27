@@ -13,7 +13,8 @@ Biarch: true
 Depends: 
     R (>= 3.4.0)
 Imports: 
-    dplyr, linkcomm, purrr, reshape2, tidyr, posterior, instantiate, foreach, doParallel, parallel
+    dplyr, linkcomm, purrr, reshape2, tidyr, posterior, instantiate, foreach, doParallel, ggplot2, parallel, ggnewscale, ggrepel, patchwork, plyr
+Suggests: knitr, testthat (>= 2.1.0), rmarkdown, markdown, kableExtra
 LinkingTo: 
     BH (>= 1.66.0),
     Rcpp (>= 0.12.0),

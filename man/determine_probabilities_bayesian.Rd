@@ -20,33 +20,51 @@ determine_probabilities_bayesian(
 )
 }
 \arguments{
-\item{dataset}{dataset}
+\item{dataset}{A complete longitudinal dataset with columns allele, subject,
+time, and present. All alleles must be included in the dataset for each
+subject and at each time. The dataset should  be arranged in the order:
+time, subject, allele.}
 
-\item{infection_persistence_covariates}{infection_persistence_covariates}
+\item{infection_persistence_covariates}{A character vector of column names
+in the dataset corresponding to covariates that increase only the
+probability of an infection being present due to a persistent infection.}
 
-\item{infection_general_covariates}{infection_general_covariates}
+\item{infection_general_covariates}{A character vector of column names
+in the dataset corresponding to covariates that increase the
+probability of a new infection being present}
 
-\item{alleles_persistence_covariates}{alleles_persistence_covariates}
+\item{alleles_persistence_covariates}{A character vector of column names
+in the dataset corresponding to covariates that increase only the
+probability of an allele being present due to a persistent infection.}
 
-\item{chains}{chains}
+\item{chains}{Number of chains for the Stan model}
 
-\item{parallel_chains}{parallel_chains}
+\item{parallel_chains}{Number of parallel chains for the Stan model}
 
-\item{iter_warmup}{iter_warmup}
+\item{iter_warmup}{Number of warm-up steps for the Stan model}
 
-\item{iter_sampling}{iter_sampling}
+\item{iter_sampling}{Number of sampling steps for the Stan model}
 
-\item{refresh}{refresh}
+\item{refresh}{Stan updates will be printed every \code{refresh} steps}
 
-\item{adapt_delta}{adapt_delta}
+\item{adapt_delta}{Stan's \code{adapt_delta} parameter}
 
-\item{seed}{seed}
+\item{seed}{Random seed for Stan}
 
-\item{drop_out}{drop_out}
+\item{drop_out}{Whether to use a model that allows alleles to be called
+persistent despite having never been previously observed due to sequencing
+drop-out. This is recommended if more than 50\% of the alleles have dropped
+out.}
 }
 \value{
-An list with probabilities
+A named list with (1) \code{probability_new} as a 0/1 vector of whether
+the corresponding allele in the dataset was from a new infection and (2)
+\code{fit} as the Stan model output.
 }
 \description{
-determine_probabilities_bayesian
+Determine whether an allele is new or persistent using a Bayesian model.
+A Bayesian model is parameterized with general and persistence covariates
+to model the probability an infection (overall and allele-specific) is
+present. The model is fit in Stan, and the parameters are used to estimate
+the probability each allele is new.
 }

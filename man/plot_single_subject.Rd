@@ -7,28 +7,68 @@
 plot_single_subject(
   subject,
   dataset,
-  output = NULL,
   treatments = NULL,
+  no_imputation = FALSE,
+  output = NULL,
   height = 6,
   width = 8
 )
 }
 \arguments{
-\item{subject}{subject}
+\item{subject}{Subject to plot}
 
-\item{dataset}{dataset}
+\item{dataset}{A complete longitudinal dataset with columns \code{allele},
+\code{subject}, \code{time}, and \code{present}. To plot imputations,
+\code{probability_present} should be a column. To plot probabilities alleles
+are new, \code{probability_new} should be a column. To display allele
+prevalence, \code{prevalence} should be a column.}
 
-\item{output}{output}
+\item{treatments}{A data.frame of treatments with columns \code{subject} and
+\code{time}.}
 
-\item{treatments}{treatments}
+\item{no_imputation}{Disregard qPCR-only times by setting times with
+\code{present == 2} to \code{present = 0}.}
 
-\item{height}{height}
+\item{output}{File to which the plot should be saved}
 
-\item{width}{width}
+\item{height}{Height of the output plot}
+
+\item{width}{Width of the output plot}
 }
 \value{
-return
+A plot object from ggplot2 showing the infection course for the
+subject
 }
 \description{
-plot_single_subject
+Plot an infection time course from a single subject. The plot
+shows when each allele was present for each locus with annotations
+for the probability the allele is new if such probabilities are
+available. If these probabilities are available, the pan-locus new
+complexity of infection at each time is shown in a strip above the plot.
+Red dashes indicate a qPCR positive only time point. Blue dashes indicate
+treatment at that day. Imputed alleles are opaque according to their
+probability of being present. If probabilities the alleles are new
+are available, black dots indicate infections that are new with >80\%
+probability, open dots indicate infections that are new with <20\%
+probability, and all other dots are annotated with their probabilities
+of being new.
+}
+\examples{
+
+library(dplyr)
+dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
+     subject = rep('A', 5),
+     time = c(1, 1, 5, 15, 44))
+treatments <- data.frame(subject = c('A', 'B'),
+                         time = c(1, 29))
+
+dataset <- fill_in_dataset(dataset_in)
+dataset <- dataset \%>\%
+   arrange(time, subject, allele)
+
+dataset$probability_new <-
+    determine_probabilities_simple(dataset)$probability_new
+
+plot_single_subject('A', dataset, treatments)
+
 }

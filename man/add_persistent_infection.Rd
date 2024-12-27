@@ -7,11 +7,24 @@
 add_persistent_infection(dataset)
 }
 \arguments{
-\item{dataset}{dataset}
+\item{dataset}{A complete longitudinal dataset with columns \code{allele},
+\code{subject}, \code{time}, and \code{present_infection}}
 }
 \value{
-return
+The dataset with a new column \code{persistent_infection} (0/1)
+indicating whether any infection has been observed before.
 }
 \description{
-add_persistent_infection
+Add a column with an indicator of whether an infection has occurred before
+}
+\examples{
+
+dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
+    subject = rep('A', 5),
+    time = c(1, 1, 2, 3, 4))
+
+dataset <- fill_in_dataset(dataset_in)
+dataset <- add_present_infection(dataset)
+dataset <- add_persistent_infection(dataset)
+
 }

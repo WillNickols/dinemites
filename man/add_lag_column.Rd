@@ -7,13 +7,28 @@
 add_lag_column(dataset, lag_time = 30)
 }
 \arguments{
-\item{dataset}{dataset}
+\item{dataset}{A complete longitudinal dataset with columns \code{allele},
+\code{subject}, \code{time}, and \code{present}}
 
-\item{lag_time}{lag_time}
+\item{lag_time}{The time within which previous infections count towards the
+indicator}
 }
 \value{
-return
+The dataset with a new column \code{lag_[lag_time]} (0/1)
+indicating whether the allele has been observed in the last \code{lag_time} times
 }
 \description{
-add_lag_column
+Add a column with an indicator of whether an infection with the allele
+has occurred in the last \code{lag_time} times
+}
+\examples{
+
+dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
+    subject = rep('A', 5),
+    time = c(1, 1, 2, 3, 4))
+
+dataset <- fill_in_dataset(dataset_in)
+dataset <- add_present_infection(dataset)
+dataset <- add_lag_column(dataset)
+
 }

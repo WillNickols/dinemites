@@ -7,19 +7,39 @@
 impute_dataset(dataset, n_imputations = 10, k = NULL, n_cores = 1, seed = 1)
 }
 \arguments{
-\item{dataset}{dataset}
+\item{dataset}{A complete longitudinal dataset with columns \code{allele},
+\code{subject}, \code{time}, and \code{present}.}
 
-\item{n_imputations}{n_imputations}
+\item{n_imputations}{Number of imputed datasets to return}
 
-\item{k}{k}
+\item{k}{Maximum window size to consider when evaluating presence/absence
+patterns. k/2 time points on either side of the value to be imputed
+are used to match the qPCR-only time point to complete data time points that
+could have generated such a pattern. By default, k will be the minimum of 9
+and the average number of time points per subject.}
 
-\item{n_cores}{n_cores}
+\item{n_cores}{Number of cores to use when imputing datasets}
 
-\item{seed}{seed}
+\item{seed}{Random seed}
 }
 \value{
-return
+An nrow(dataset) by n_imputations matrix of 0s and 1s corresponding
+to the imputed values, one column per imputed dataset
+
+dataset_in <- data.frame(allele = c('A', 'A', 'A', NA, NA, 'B', NA, 'B'),
+subject = rep('A', 8),
+time = c(1, 2, 3, 4, 5, 6, 7, 8))
+
+qpcr_times <- data.frame(subject = rep('A', 1), time = c(7))
+
+dataset <- fill_in_dataset(dataset_in)
+dataset <- add_qpcr_times(dataset, qpcr_times)
+dataset <- dataset \%>\%
+dplyr::arrange(subject, allele, time)
+imputed_mat <- impute_dataset(dataset)
+dataset$present_probability <- rowMeans(imputed_mat)
 }
 \description{
-impute_dataset
+Impute alleles at time points that are only known to be qPCR positive using
+the presence-absence patterns of the complete portions of the data.
 }
