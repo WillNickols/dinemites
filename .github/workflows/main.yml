@@ -129,6 +129,7 @@ jobs:
           ## Pass #3 to install cmdstanr
           message(paste('****', Sys.time(), 'pass number 3 at installing dependencies: cmdstanr ****'))
           install.packages("cmdstanr", repos = c('https://stan-dev.r-universe.dev', getOption("repos")))
+          cmdstanr::check_cmdstan_toolchain(fix = TRUE)
           cmdstanr::install_cmdstan()
         shell: Rscript {0}
 
