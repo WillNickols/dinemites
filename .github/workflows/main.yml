@@ -130,7 +130,7 @@ jobs:
           message(paste('****', Sys.time(), 'pass number 3 at installing dependencies: cmdstanr ****'))
           install.packages("cmdstanr", repos = c('https://stan-dev.r-universe.dev', getOption("repos")))
           cmdstanr::check_cmdstan_toolchain(fix = TRUE)
-          cmdstanr::install_cmdstan()
+          cmdstanr::install_cmdstan(release_url = 'https://github.com/stan-dev/cmdstan/releases/download/v2.35.0/cmdstan-2.35.0.tar.gz')
         shell: Rscript {0}
 
       - name: Session info
