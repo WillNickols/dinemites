@@ -70,7 +70,7 @@ jobs:
       - name: Install Linux system dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update -y && sudo apt-get install -y make cmake libicu-dev zlib1g-dev pandoc libcurl4-openssl-dev
+          sudo apt-get update -y && sudo apt-get install -y make cmake libicu-dev zlib1g-dev pandoc libcurl4-openssl-dev libfontconfig1-dev
 
       - name: Install macOS system dependencies
         if: matrix.config.os == 'macOS-latest'

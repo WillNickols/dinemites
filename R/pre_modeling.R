@@ -47,7 +47,8 @@ fill_in_dataset <- function(dataset) {
         dplyr::group_by(.data$subject) %>%
         tidyr::expand(allele = unique(dataset$allele[!is.na(dataset$allele)]),
                       time = unique(.data$time),
-                      present = 0)
+                      present = 0) %>%
+        dplyr::ungroup()
 
     unique_dataset <- dataset %>%
         dplyr::distinct(.data$subject, .data$time, .keep_all = TRUE) %>%
@@ -101,11 +102,11 @@ fill_in_dataset <- function(dataset) {
 #' @examples
 #'
 #' dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
-#'     subject = rep('A', 5),
-#'     time = c(1, 1, 2, 3, 4))
+#' subject = rep('A', 5),
+#' time = c(1, 1, 2, 3, 4))
 #'
 #' qpcr_times <- data.frame(subject = rep('A', 2),
-#'     time = c(2, 5))
+#'                          time = c(1, 4))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
 #' dataset <- add_qpcr_times(dataset, qpcr_times)
@@ -129,7 +130,8 @@ add_qpcr_times <- function(dataset, qpcr_times) {
         dplyr::group_by(.data$subject) %>%
         tidyr::expand(allele = unique(dataset$allele),
                       time = unique(.data$time),
-                      present = 2)
+                      present = 2) %>%
+        dplyr::ungroup()
 
     if ('locus' %in% colnames(dataset)) {
         qpcr_times <- qpcr_times %>%
@@ -147,25 +149,30 @@ add_qpcr_times <- function(dataset, qpcr_times) {
         dplyr::mutate(
             subject_time = as.character(interaction(.data$subject, .data$time)))
 
+    if (any(!qpcr_times$subject_time %in% dataset$subject_time)) {
+        stop("All qpcr_times subject times must be in the dataset")
+    }
+
     any_present_df <- dataset %>%
         dplyr::group_by(.data$subject_time) %>%
-        dplyr::summarise(any_present = any(.data$present == 1))
+        dplyr::filter(any(.data$present == 1)) %>%
+        dplyr::ungroup()
 
     qpcr_times <- qpcr_times %>%
-        dplyr::filter(
-            !.data$subject_time %in%
-                any_present_df$subject_time[any_present_df$any_present])
+        dplyr::filter(!subject_time %in% any_present_df$subject_time)
 
+    if ('locus' %in% colnames(dataset)) {
+        dataset <- left_join(dataset, qpcr_times,
+            by = c("time", "subject", "allele", "locus", "subject_time"))
+    } else {
+        dataset <- left_join(dataset, qpcr_times,
+            by = c("time", "subject", "allele", "subject_time"))
+    }
     dataset <- dataset %>%
-        dplyr::filter(
-            .data$subject_time %in%
-                any_present_df$subject_time[any_present_df$any_present] |
-            !.data$subject_time %in% qpcr_times$subject_time)
-
-    dataset <- rbind(dataset, qpcr_times)
-
-    dataset <- dataset %>%
-        dplyr::select(-.data$subject_time) %>%
+        dplyr::mutate(
+            present = pmax(.data$present.x, .data$present.y, na.rm = T)) %>%
+        dplyr::select(
+            -.data$present.x, -.data$present.y, -.data$subject_time) %>%
         dplyr::arrange(.data$time, .data$subject, .data$allele)
 
     return(dataset)

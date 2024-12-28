@@ -168,7 +168,7 @@ plot_single_subject <- function(subject,
                 geom_vline(xintercept = treatments[treatments$subject ==
                                                        subject_current,]$time,
                            color = 'blue',
-                           linetype = 'dotted') +
+                           linetype = '33') +
                 geom_point(aes(x = .data$time,
                                y = .data$total_new,
                                fill = 'black'),
@@ -217,8 +217,8 @@ plot_single_subject <- function(subject,
                        linetype = 'dashed') +
             geom_vline(xintercept = treatments[
                 treatments$subject == subject_current,]$time,
-                       color = 'blue',
-                       linetype = 'dotted') +
+                color = 'blue',
+                linetype = '33') +
             ggnewscale::new_scale_fill() +
             geom_line(aes(color = .data$allele,
                           group = .data$allele,
@@ -350,6 +350,7 @@ plot_single_subject <- function(subject,
 #' plot_dataset(dataset, treatments)
 #'
 #' @import dplyr
+#' @import ggplot2
 #'
 plot_dataset <- function(dataset,
                          treatments = NULL,
