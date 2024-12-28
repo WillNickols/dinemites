@@ -28,11 +28,11 @@ sequencing values.
 \examples{
 
 dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
-    subject = rep('A', 5),
-    time = c(1, 1, 2, 3, 4))
+subject = rep('A', 5),
+time = c(1, 1, 2, 3, 4))
 
 qpcr_times <- data.frame(subject = rep('A', 2),
-    time = c(2, 5))
+                         time = c(1, 4))
 
 dataset <- fill_in_dataset(dataset_in)
 dataset <- add_qpcr_times(dataset, qpcr_times)

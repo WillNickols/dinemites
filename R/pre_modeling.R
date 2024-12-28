@@ -159,7 +159,7 @@ add_qpcr_times <- function(dataset, qpcr_times) {
         dplyr::ungroup()
 
     qpcr_times <- qpcr_times %>%
-        dplyr::filter(!subject_time %in% any_present_df$subject_time)
+        dplyr::filter(!.data$subject_time %in% any_present_df$subject_time)
 
     if ('locus' %in% colnames(dataset)) {
         dataset <- left_join(dataset, qpcr_times,
