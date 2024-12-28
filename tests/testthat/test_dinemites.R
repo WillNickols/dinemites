@@ -1,140 +1,110 @@
-# library(testthat)
-# library(dinemites)
-#
-# dataset <- read.csv(system.file(package="dinemites","extdata","dataset.tsv"), header = TRUE, sep="\t")
-# treatments <- read.csv(system.file(package="dinemites","extdata","treatments.tsv"), header = TRUE, sep="\t")
-# qPCR_only <- read.csv(system.file(package="dinemites","extdata","qPCR_only.tsv"), header = TRUE, sep="\t")
-#
-# dataset <- fill_in_dataset(dataset)
-# dataset <- add_qpcr_times(dataset, qpcr_times = qPCR_only)
-#
-# estimate_drop_out(dataset)
-#
-# dataset <- dataset %>%
-#     dplyr::arrange(subject, allele, time)
-#
-# n_imputations <- 10
-# imputed_datasets <- impute_dataset(dataset, n_imputations = n_imputations)
-#
-# for (i in 1:n_imputations) {
-#     dataset_tmp <- dataset
-#     dataset_tmp$present <- imputed_datasets[,i]
-#
-#     dataset_tmp <- dataset_tmp %>%
-#         add_present_infection() %>%
-#         add_persistent_column() %>%
-#         add_persistent_infection() %>%
-#         add_lag_column() %>%
-#         add_lag_infection() %>%
-#         add_treatment_column(treatments = treatments, verbose = F) %>%
-#         add_treatment_infection(treatments = treatments, verbose = F)
-#
-#     probabilities_simple <- determine_probabilities_simple(dataset_tmp)
-#     probabilities_simple <- determine_probabilities_bayesian(
-#         dataset = dataset_tmp,
-#         infection_persistence_covariates = c("persistent_infection", "lag_infection_30", "treatment_acute_infection", "treatment_longitudinal_infection"),
-#         infection_general_covariates = c("season"),
-#         alleles_persistence_covariates = c("persistent", "lag_30", "treatment_acute", "treatment_longitudinal"),
-#         refresh = 10)
-# }
-#
-#
-#
-# probabilities_simple <- determine_probabilities_simple(dataset)
-#
-# taxa_table <- read.table(system.file(package="maaslin3","extdata","HMP2_taxonomy.tsv"), header = TRUE, sep="\t")
-# metadata <- read.table(system.file(package="maaslin3","extdata","HMP2_metadata.tsv"), header = TRUE, sep="\t")
-#
-# metadata$diagnosis <- factor(metadata$diagnosis, levels = c('nonIBD', 'UC', 'CD'))
-# metadata$dysbiosis_state <- factor(metadata$dysbiosis_state, levels = c('none', 'dysbiosis_UC', 'dysbiosis_CD'))
-# metadata$antibiotics <- factor(metadata$antibiotics, levels = c('No', 'Yes'))
-#
-# # Run MaAsLin 3
-# output_tmp <- tempfile()
-# set.seed(1)
-# fit_out <- maaslin3(input_data = taxa_table,
-#                     input_metadata = metadata,
-#                     output = output_tmp,
-#                     normalization = 'TSS',
-#                     transform = 'LOG',
-#                     formula = '~ diagnosis + dysbiosis_state + antibiotics + age + reads',
-#                     save_models = FALSE,
-#                     plot_summary_plot = T,
-#                     plot_associations = T,
-#                     max_significance = 0.1,
-#                     augment = TRUE,
-#                     median_comparison_abundance = TRUE,
-#                     median_comparison_prevalence = FALSE,
-#                     cores=1,
-#                     verbosity = 'WARN')
-#
-# maaslin_results = read.table(file.path(output_tmp, "significant_results.tsv"), header = TRUE, stringsAsFactors=FALSE)
-#
-# expect_that(expected_results_run1$metadata[1:50],equals(maaslin_results$metadata[1:50]))
-# expect_that(expected_results_run1$feature[1:50],equals(maaslin_results$feature[1:50]))
-# expect_that(round(expected_results_run1$N[1:50],10),equals(round(maaslin_results$N[1:50],10)))
-# expect_that(round(as.numeric(expected_results_run1$pval_individual[1:50]),10),
-#             equals(round(as.numeric(maaslin_results$pval_individual[1:50]),10)))
-# expect_that(round(as.numeric(expected_results_run1$qval_individual[1:50]),10),
-#             equals(round(as.numeric(maaslin_results$qval_individual[1:50]),10)))
-#
-# se <- SummarizedExperiment::SummarizedExperiment(
-#     assays = list(taxa_table = t(taxa_table)),
-#     colData = metadata
-# )
-#
-# fit_out <- maaslin3(input_data = se,
-#                     input_metadata = metadata,
-#                     output = output_tmp,
-#                     normalization = 'TSS',
-#                     transform = 'LOG',
-#                     formula = '~ diagnosis + dysbiosis_state + antibiotics + age + reads',
-#                     save_models = FALSE,
-#                     plot_summary_plot = T,
-#                     plot_associations = T,
-#                     max_significance = 0.1,
-#                     augment = TRUE,
-#                     median_comparison_abundance = TRUE,
-#                     median_comparison_prevalence = FALSE,
-#                     cores=1,
-#                     verbosity = 'WARN')
-#
-# tse <- TreeSummarizedExperiment::TreeSummarizedExperiment(
-#     assays = list(taxa_table = t(taxa_table)),
-#     colData = metadata
-# )
-#
-# fit_out <- maaslin3(input_data = tse,
-#                     input_metadata = metadata,
-#                     output = output_tmp,
-#                     normalization = 'TSS',
-#                     transform = 'LOG',
-#                     formula = '~ diagnosis + dysbiosis_state + antibiotics + age + reads',
-#                     save_models = FALSE,
-#                     plot_summary_plot = T,
-#                     plot_associations = T,
-#                     max_significance = 0.1,
-#                     augment = TRUE,
-#                     median_comparison_abundance = TRUE,
-#                     median_comparison_prevalence = FALSE,
-#                     cores=1,
-#                     verbosity = 'WARN')
-#
-# metadata <- as(metadata, "DataFrame")
-# fit_out <- maaslin3(input_data = tse,
-#                     input_metadata = metadata,
-#                     output = output_tmp,
-#                     normalization = 'TSS',
-#                     transform = 'LOG',
-#                     formula = '~ diagnosis + dysbiosis_state + antibiotics + age + reads',
-#                     save_models = FALSE,
-#                     plot_summary_plot = T,
-#                     plot_associations = T,
-#                     max_significance = 0.1,
-#                     augment = TRUE,
-#                     median_comparison_abundance = TRUE,
-#                     median_comparison_prevalence = FALSE,
-#                     cores=1,
-#                     verbosity = 'WARN')
-#
-# unlink(output_tmp, recursive = T)
+library(testthat)
+library(dinemites)
+library(dplyr)
+
+dataset <- read.csv(system.file(package="dinemites","extdata","dataset.tsv"), header = TRUE, sep="\t")
+treatments <- read.csv(system.file(package="dinemites","extdata","treatments.tsv"), header = TRUE, sep="\t")
+qPCR_only <- read.csv(system.file(package="dinemites","extdata","qPCR_only.tsv"), header = TRUE, sep="\t")
+
+dataset <- fill_in_dataset(dataset)
+dataset <- add_qpcr_times(dataset, qpcr_times = qPCR_only)
+
+estimate_drop_out(dataset)
+
+dataset <- dataset %>%
+    dplyr::arrange(subject, allele, time)
+
+n_imputations <- 5
+imputed_datasets <- impute_dataset(dataset, n_imputations = n_imputations)
+
+probabilities_simple_mat <-
+    matrix(ncol = n_imputations, nrow = nrow(dataset))
+probabilities_bayesian_mat <-
+    matrix(ncol = n_imputations, nrow = nrow(dataset))
+probabilities_clustering_mat <-
+    matrix(ncol = n_imputations, nrow = nrow(dataset))
+for (i in 1:n_imputations) {
+    dataset_tmp <- dataset
+    dataset_tmp$present <- imputed_datasets[,i]
+
+    dataset_tmp <- dataset_tmp %>%
+        add_present_infection() %>%
+        add_persistent_column() %>%
+        add_persistent_infection() %>%
+        add_lag_column() %>%
+        add_lag_infection() %>%
+        add_treatment_column(treatments = treatments, verbose = F) %>%
+        add_treatment_infection(treatments = treatments, verbose = F)
+
+    probabilities_simple <- determine_probabilities_simple(dataset_tmp)
+    probabilities_simple_mat[,i] <- probabilities_simple$probability_new
+
+    if (instantiate::stan_cmdstan_exists()) {
+        probabilities_bayesian <- determine_probabilities_bayesian(
+            dataset = dataset_tmp,
+            infection_persistence_covariates =
+                c("persistent_infection",
+                  "lag_infection_30",
+                  "treatment_acute_infection",
+                  "treatment_longitudinal_infection"),
+            infection_general_covariates =
+                c("season"),
+            alleles_persistence_covariates =
+                c("persistent",
+                  "lag_30",
+                  "treatment_acute",
+                  "treatment_longitudinal"),
+            refresh = 100)
+        probabilities_bayesian_mat[,i] <- probabilities_bayesian$probability_new
+
+        probabilities_clustering <- determine_probabilities_clustering(dataset = dataset_tmp)
+        probabilities_clustering_mat[,i] <- probabilities_clustering$probability_new
+    }
+}
+
+probabilities_simple_mat_check <-
+    read.table(system.file(package="dinemites", "extdata", "probabilities_simple_mat.tsv"),
+               sep = '\t') %>% as.matrix()
+probabilities_bayesian_mat_check <-
+    read.table(system.file(package="dinemites", "extdata", "probabilities_bayesian_mat.tsv"),
+               sep = '\t') %>% as.matrix()
+probabilities_clustering_mat_check <-
+    read.table(system.file(package="dinemites", "extdata", "probabilities_clustering_mat.tsv"),
+               sep = '\t') %>% as.matrix()
+
+if (!instantiate::stan_cmdstan_exists()) {
+    probabilities_bayesian_mat <-
+        read.table(system.file(package="dinemites", "extdata", "probabilities_bayesian_mat.tsv"),
+                   sep = '\t') %>% as.matrix()
+    probabilities_clustering_mat <-
+        read.table(system.file(package="dinemites", "extdata", "probabilities_clustering_mat.tsv"),
+                   sep = '\t') %>% as.matrix()
+}
+
+expect_that(probabilities_simple_mat[,1],equals(probabilities_simple_mat_check[,1]))
+expect_that(probabilities_bayesian_mat[,1],equals(probabilities_bayesian_mat_check[,1]))
+expect_that(probabilities_clustering_mat[,1],equals(probabilities_clustering_mat_check[,1]))
+
+expect_that(probabilities_simple_mat[,n_imputations],
+            equals(probabilities_simple_mat_check[,n_imputations]))
+expect_that(probabilities_bayesian_mat[,n_imputations],
+            equals(probabilities_bayesian_mat_check[,n_imputations]))
+expect_that(probabilities_clustering_mat[,n_imputations],
+            equals(probabilities_clustering_mat_check[,n_imputations]))
+
+dataset <- dataset %>%
+    dplyr::arrange(subject, allele, time)
+
+dataset$probability_present <- rowMeans(imputed_datasets)
+
+dataset <- dataset %>%
+    dplyr::arrange(time, subject, allele)
+dataset$probability_new <- rowMeans(probabilities_bayesian_mat, na.rm = T)
+
+plot_dataset(dataset, treatments)
+
+
+
+
+
+

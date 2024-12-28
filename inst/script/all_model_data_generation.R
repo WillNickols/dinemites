@@ -5,9 +5,6 @@ library(dinemites)
 simulation_type <- c("persistent",
                      "lag_30",
                      "season",
-                     "fixed_covariate",
-                     "prevention_covariate",
-                     "time_varying_covariate",
                      "treatment")
 
 qPCR_only_fun <- function(dataset, rate = 0.5) {
@@ -57,7 +54,7 @@ generate_synthetic_data_pois_time <- function(simulation_type,
 
     allele_set <- 1:nalleles
     abeta <- 1
-    bbeta <- 50
+    bbeta <- 20
 
     loci_corresponding <- rep(1:loci, each = nalleles / loci)
 
@@ -244,10 +241,10 @@ generate_synthetic_data_pois_time <- function(simulation_type,
 
             if ("treatment" %in% simulation_type) {
                 treatment_efficacy <- 0.9
-                is_treated <- length(unique(infected_alleles)) > 0 & runif(1) < 0.1
+                is_treated <- length(unique(infected_alleles)) > 0 & runif(1) < 0.2
                 if (is_treated) {
                     for (entry in seq(length(infection_events))) {
-                        if (any(infection_events[[entry]]$time_points > time_point)) {
+                        if (any(infection_events[[entry]]$time_points > time_point, na.rm = TRUE)) {
                             all_infections <- unique(unlist(infection_events[[entry]]$infected_alleles))
                             infection_events[[entry]]$infected_alleles <-
                                 all_infections[rbinom(length(all_infections), 1, 1 - treatment_efficacy) == 1]
@@ -325,14 +322,14 @@ generate_synthetic_data_pois_time <- function(simulation_type,
 }
 
 synth_data <- generate_synthetic_data_pois_time(simulation_type,
-                                                nsubjects = 20,
-                                                nalleles = 100,
+                                                nsubjects = 5,
+                                                nalleles = 20,
                                                 nappointments = 15,
                                                 total_times = 200,
                                                 gene_interaction = TRUE,
                                                 qPCR_only = 0.2,
                                                 drop_out = 0.2,
-                                                loci = 4,
+                                                loci = 2,
                                                 seed = 1)
 
 treatments <- synth_data %>%
@@ -346,10 +343,10 @@ dataset <- synth_data %>%
     dplyr::select(-treatment, -novelty, -infection_event, -actually_present, -present)
 
 dataset <- rbind(dataset, synth_data %>%
-        dplyr::group_by(subject, time, season, fixed_covariate, time_varying_covariate, prevention_covariate) %>%
+        dplyr::group_by(subject, time, season) %>%
         dplyr::filter(!any(present == 1)) %>%
         dplyr::ungroup() %>%
-        dplyr::select(subject, time, season, fixed_covariate, time_varying_covariate, prevention_covariate) %>%
+        dplyr::select(subject, time, season) %>%
         unique() %>%
         dplyr::mutate(allele = NA, locus = NA))
 
