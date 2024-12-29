@@ -15,11 +15,11 @@ indicator}
 }
 \value{
 The dataset with a new column \code{lag_[lag_time]} (0/1)
-indicating whether the allele has been observed in the last \code{lag_time} times
+indicating whether the allele has been observed in the last \code{lag_time} times.
 }
 \description{
 Add a column with an indicator of whether an infection with the allele
-has occurred in the last \code{lag_time} times
+has occurred in the last \code{lag_time} times.
 }
 \examples{
 

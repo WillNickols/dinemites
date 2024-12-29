@@ -6,18 +6,17 @@ inv_logit <- function(x) {
 #'
 #' Determine whether an allele is new or persistent using a simple rule.
 #' For each subject, an allele is counted as new if it has not been observed in
-#' the n_lags most recent samples (e.g., visits) or in the t_lag most recent
+#' the `n_lags` most recent samples (e.g., visits) or in the `t_lag` most recent
 #' times (e.g., days). If the allele has been observed in both the last
-#' n_lags samples and the last t_lag times, it is considered new.
+#' `n_lags` samples and the last `t_lag` times, it is considered new.
 #'
 #' @export
-#' @param dataset A complete longitudinal dataset with columns allele, subject,
-#' time, and present. All alleles must be included in the dataset for each
-#' subject and at each time.
+#' @param dataset A complete longitudinal dataset with columns `allele`,
+#' `subject`, `time`, and `present.`
 #' @param n_lags If the allele has been observed in both the last
-#' n_lags samples and the last t_lag times, it is considered new.
+#' `n_lags` samples and the last `t_lag` times, it is considered new.
 #' @param t_lag If the allele has been observed in both the last
-#' n_lags samples and the last t_lag times, it is considered new.
+#' `n_lags` samples and the last `t_lag` times, it is considered new.
 #' @return A named list with (1) `probability_new` as a 0/1 vector of whether
 #' the corresponding allele in the dataset was from a new infection and (2)
 #' `fit` as `NULL` (for consistency with the other models).
@@ -43,6 +42,7 @@ determine_probabilities_simple <- function(dataset,
     }
 
     check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
 
     if (n_lags < 1) {
         stop("n_lags must be >= 1")
@@ -102,9 +102,8 @@ determine_probabilities_simple <- function(dataset,
 #' the probability each allele is new.
 #'
 #' @export
-#' @param dataset A complete longitudinal dataset with columns allele, subject,
-#' time, and present. All alleles must be included in the dataset for each
-#' subject and at each time.
+#' @param dataset A complete longitudinal dataset with columns `allele`,
+#' `subject`, `time`, and `present.`
 #' @param infection_persistence_covariates A character vector of column names
 #' in the dataset corresponding to covariates that increase only the
 #' probability of an infection being present due to a persistent infection.
@@ -125,9 +124,9 @@ determine_probabilities_simple <- function(dataset,
 #' persistent despite having never been previously observed due to sequencing
 #' drop-out. This is recommended if more than 50% of the alleles have dropped
 #' out.
-#' @return A named list with (1) `probability_new` as a 0/1 vector of whether
-#' the corresponding allele in the dataset was from a new infection and (2)
-#' `fit` as the Stan model output.
+#' @return A named list with (1) `probability_new` as a vector of the
+#' probabilities the corresponding alleles in the dataset were from new
+#' infections and (2) `fit` as the Stan model output.
 #' @import dplyr
 #' @importFrom  stats as.formula
 #' @importFrom  stats model.matrix
@@ -151,6 +150,7 @@ determine_probabilities_bayesian <- function(dataset,
     }
 
     check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
 
     if (any(!dataset$present %in% c(0,1))) {
         stop("present column must be 0/1")
@@ -459,13 +459,13 @@ determine_probabilities_bayesian <- function(dataset,
 #' are used to estimate the probability an infection is new.
 #'
 #' @export
-#' @param dataset A complete longitudinal dataset with columns allele, subject,
-#' time, and present. All alleles must be included in the dataset for each
-#' subject and at each time.
+#' @param dataset A complete longitudinal dataset with columns `allele`,
+#' `subject`, `time`, and `present.`
 #' @param refresh Stan updates will be printed every `refresh` steps
 #' @param seed Random seed for Stan
-#' @return A named list with (1) `probability_new` as a 0/1 vector of whether
-#' the corresponding allele in the dataset was from a new infection and (2)
+#' @return A named list with (1) `probability_new` as a vector of the
+#' probabilities the corresponding alleles in the dataset were from new
+#' infections and (2)
 #' `fit` as the resulting parameters from the likelihood maximization
 #' procedure.
 #' @import dplyr
@@ -483,6 +483,7 @@ determine_probabilities_clustering <- function(dataset,
     }
 
     check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
 
     if (any(!dataset$present %in% c(0,1))) {
         stop("present column must be 0/1")

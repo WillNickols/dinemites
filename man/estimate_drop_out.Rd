@@ -15,7 +15,7 @@ at most \code{gap_size} will be included in the estimation}
 }
 \value{
 Numeric vector with the estimated drop-out rate, the number of
-gap positions evaluated, and the number of alleles present in those gaps
+gap positions evaluated, and the number of alleles present in those gaps.
 }
 \description{
 Estimate the sequencing drop-out rate in a dataset by selecting alleles

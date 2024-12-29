@@ -27,20 +27,21 @@ variants are being cleared but might still be detected.}
 at which to mark the start of the longitudinal treatment phase, corresponding
 to when cleared variants will no longer be detected.}
 
-\item{verbose}{Print an update ever 10 subjects since this function can
+\item{verbose}{Print an update every 10 subjects since this function can
 take some time.}
 }
 \value{
 The dataset with new columns \code{treatment_acute_infection} and
-\code{treatment_longitudinal_infection} (0/1) indicating that the infection was
-treated in
-the last \code{treatment_longitudinal_start} days (acute) or ever (longitudinal).
+\code{treatment_longitudinal_infection} (both 0/1) indicating that the infection
+was treated between \code{treatment_acute_start} (inclusive) and
+\code{treatment_longitudinal_start} (exclusive) times ago (acute) or at least
+\code{treatment_longitudinal_start} times ago (longitudinal).
 Columns for \code{persistent_infection} and \verb{lag_infection_[#]} will be set to 0
 after treatment until the next infection.
 }
 \description{
 Add columns with indicators of whether there is acute or longitudinal
-(any previous) treatment for any allele
+(any previous) treatment for any allele.
 }
 \examples{
 

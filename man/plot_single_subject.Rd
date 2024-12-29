@@ -40,22 +40,25 @@ A plot object from ggplot2 showing the infection course for the
 subject
 }
 \description{
-Plot an infection time course from a single subject. The plot
-shows when each allele was present for each locus with annotations
-for the probability the allele is new if such probabilities are
-available. If these probabilities are available, the pan-locus new
+Plot an infection time course for a single subject. The plot
+shows when each allele was present (for each locus if applicable)
+with annotations
+for the probability the allele is new if \code{probability_new} is a column. Each
+allele is its own row and color, and points are connected if the same allele
+occurs repeatedly.
+If \code{probability_new} is a column, the pan-locus new
 complexity of infection at each time is shown in a strip above the plot.
-Red dashes indicate a qPCR positive only time point. Blue dashes indicate
+Red dashes indicate a time point only known to be infection positive (i.e.,
+no sequencing). Blue dashes indicate
 treatment at that day. Imputed alleles are opaque according to their
-probability of being present. If probabilities the alleles are new
-are available, black dots indicate infections that are new with >80\%
+probability of being present. If \code{probability_new} is a column, black dots
+indicate infections that are new with >80\%
 probability, open dots indicate infections that are new with <20\%
 probability, and all other dots are annotated with their probabilities
 of being new.
 }
 \examples{
 
-library(dplyr)
 dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
      subject = rep('A', 5),
      time = c(1, 1, 5, 15, 44))

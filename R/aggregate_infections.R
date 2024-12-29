@@ -1,8 +1,9 @@
 #' compute_total_new_COI
 #'
-#' Compute the total new COI deduplicated across loci for each subject by
-#' either summing across the loci and taking the max or maximizing the
-#' diversity on each day and then summing the maxima.
+#' Compute the total new complexity of infection (COI, number of unique
+#' genetic variants) deduplicated across loci for each subject by
+#' either summing across the loci and taking the maximum or maximizing the
+#' diversity on each day over the loci and then summing the maxima.
 #'
 #' @export
 #' @param dataset A complete longitudinal dataset with columns `allele`,
@@ -12,7 +13,7 @@
 #' each locus and then take the maximum (`sum_then_max`) or take the maximum
 #' per-locus COI at each time point across the loci and then sum the maxima
 #' (`max_then_sum`).
-#' @return A dataframe with a `subject` column and a `new_COI` column
+#' @return A dataframe with a `subject` column and a `new_COI` column.
 #' @examples
 #'
 #' library(dplyr)
@@ -42,6 +43,7 @@ compute_total_new_COI <- function(dataset, method = 'sum_then_max') {
     }
 
     check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
 
     if (!'probability_present' %in% colnames(dataset)) {
         message(paste0("probability_present not in colnames(dataset), ",
@@ -156,14 +158,14 @@ count_new_infections <- function(total_new,
 #' estimate_new_infections
 #'
 #' Compute the total new infection events for each subject by identifying
-#' peaks in the pan-locus new COI
+#' peaks in the pan-locus new COI.
 #'
 #' @export
 #' @param dataset A complete longitudinal dataset with columns `allele`,
 #' `subject`, `time`, `present`, `probability_new`, and
 #' `probability_present` if using imputed data.
-#' @return A dataframe with a `subject` column and a `new_infections` column
-#' #' @examples
+#' @return A data.frame with a `subject` column and a `new_infections` column.
+#' @examples
 #'
 #' library(dplyr)
 #' dataset_in <- data.frame(
@@ -196,6 +198,7 @@ estimate_new_infections <- function(dataset) {
     }
 
     check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
 
     new_infections <- dataset %>%
         dplyr::group_by(.data$subject, .data$time) %>%

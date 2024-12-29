@@ -16,11 +16,11 @@ indicator}
 \value{
 The dataset with a new column \code{lag_infection_[lag_time]} (0/1)
 indicating whether any infection has been observed in the last \code{lag_time}
-times
+times.
 }
 \description{
 Add a column with an indicator of whether any infection
-has occurred in the last \code{lag_time} times
+has occurred in the last \code{lag_time} times.
 }
 \examples{
 

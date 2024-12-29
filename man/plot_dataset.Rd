@@ -17,8 +17,7 @@ plot_dataset(
 \item{dataset}{A complete longitudinal dataset with columns \code{allele},
 \code{subject}, \code{time}, and \code{present}. To plot imputations,
 \code{probability_present} should be a column. To plot probabilities alleles
-are new, \code{probability_new} should be a column. To display allele
-prevalence, \code{prevalence} should be a column.}
+are new, \code{probability_new} should be a column.}
 
 \item{treatments}{A data.frame of treatments with columns \code{subject} and
 \code{time}.}
@@ -44,6 +43,7 @@ subject in a dataset and save the results.
 \examples{
 
 library(dplyr)
+library(dinemites)
 dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
      subject = rep('A', 5),
      time = c(1, 1, 5, 15, 44))

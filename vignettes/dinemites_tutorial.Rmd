@@ -1,0 +1,116 @@
+---
+title: "DiNeMITeS Tutorial"
+author:
+- name: William Nickols
+  email: willnickols@g.harvard.edu
+output: html_document
+vignette: >
+    %\VignetteIndexEntry{Tutorial}
+    %\VignetteEngine{knitr::rmarkdown}
+    %\VignetteEncoding{UTF-8}
+---
+
+## Introduction ##
+
+**DiNeMITes** (**Di**stinguishing **Ne**w **M**alaria **I**nfections in 
+**T**im**e** **S**eries) is a comprehensive R package for distinguishing
+new from persistent infections in longitudinal sequencing data. It is intended
+for use with longitudinal malaria studies, but it can be applied to any 
+longitudinal data in which people can acquire a disease with multiple variants
+multiple times.
+
+If you use the DiNeMITeS software, please cite our work:
+
+> William A. Nickols, Philipp Schwalb, Daniel Neafsey. In progress:
+Statistical models distinguish new malaria infections in time series sequencing
+data.
+
+### Support ###
+For issues, bugs, or questions, please open an issue at 
+https://github.com/WillNickols/dinemites/issues.
+
+## Contents
+* [1. Installing R](#installing-r)
+* [2. Installing DiNeMITeS](#installing-dinemites)
+* [3. Distinguishing new infections](#distinguishing-new-infections)
+    * [3.1 DiNeMITeS input](#dinemites-input)
+    * [3.2 Setting up covariates](#setting-up-covariates)
+    * [3.3 Running models](#running-models)
+* [4. Analyzing results](#analyzing-results)
+
+## 1. Installing R {#installing-r}
+
+[R](https://www.r-project.org/) is a programming language specializing
+in statistical computing and graphics. You can use R just the same as
+any other programming languages, but it is most useful for statistical
+analyses, with well-established packages for common tasks such as
+[linear
+modeling](https://cran.r-project.org/web/packages/lme4/index.html),
+['omic data analysis](https://bioconductor.org/), [machine
+learning](http://topepo.github.io/caret/index.html), and
+[visualization](https://ggplot2.tidyverse.org/).
+
+#### Installing R for the first time
+
+You can download and install the free R software environment
+[here](https://cloud.r-project.org/). Note that you should download the
+latest release - this will ensure the R version you have is compatible
+with MaAsLin 3.
+
+#### (Optional) the RStudio IDE
+
+[RStudio](https://rstudio.com/products/rstudio/) is a freely available
+IDE (integrated development environment) for R. It is a "wrapper" around
+R with some additional functionalities that make programming in R a bit
+easier. Feel free to download RStudio and explore its interface - but it
+is not required for this tutorial.
+
+#### Important: the correct R version
+
+If you already have R installed, then it is possible that the R version
+you have does not support DiNeMITeS The easiest way to check this is to
+launch R/RStudio, and in the console ("Console" pane in RStudio), type
+in the following command (without the `>` symbol):
+
+```{R, eval=FALSE, cache = FALSE}
+sessionInfo()
+```
+
+The first line of output message should indicate your current R version.
+For example:
+
+```
+> sessionInfo()
+R version 4.4.1 (2024-06-14)
+```
+
+For DiNeMITeS to install, you will need R >= 3.4. If your version is
+older than that, please refer to section [Installing R for the first
+time](#installing-r-for-the-first-time) to download the latest R. Note
+that RStudio users will need to have RStudio "switch" to this later
+version once it is installed. This should happen automatically for
+Windows and Mac OS users when you relaunch RStudio. For Linux users you
+might need to bind the correct R executable.
+Either way, once you have the correct version installed, launch the
+software and use `sessionInfo()` to make sure that you indeed have R >=
+3.4.
+
+## 2. Installing DiNeMITeS {#installing-dinemites}
+
+**Before installing DiNeMITeS**, `cmdstanr` must be installed. To do so, run 
+the following commands:
+```{r, eval=FALSE}
+install.packages("cmdstanr", 
+                 repos = c('https://stan-dev.r-universe.dev', 
+                           getOption("repos")))
+cmdstanr::install_cmdstan()
+```
+
+Then, the latest version of DiNeMITes can be installed from GitHub.
+```{r, eval=FALSE, cache = FALSE}
+if (!require("devtools", quietly = TRUE))
+    install.packages("devtools")
+
+devtools::install("WillNickols/dinemites")
+```
+

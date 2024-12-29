@@ -12,25 +12,27 @@ estimate_new_infections(dataset)
 \code{probability_present} if using imputed data.}
 }
 \value{
-A dataframe with a \code{subject} column and a \code{new_infections} column
-#' @examples
+A data.frame with a \code{subject} column and a \code{new_infections} column.
+}
+\description{
+Compute the total new infection events for each subject by identifying
+peaks in the pan-locus new COI.
+}
+\examples{
 
 library(dplyr)
 dataset_in <- data.frame(
-locus = rep(c(1, 2), each = 5),
-allele = c('A', 'B', 'B', NA, NA, 'A', 'A', 'B', NA, NA),
-subject = rep('A', 10),
-time = rep(c(1, 1, 5, 15, 44), 2)) \%>\%
-mutate(allele = interaction(allele, locus))
+    locus = rep(c(1, 2), each = 5),
+    allele = c('A', 'B', 'B', NA, NA, 'A', 'A', 'B', NA, NA),
+    subject = rep('A', 10),
+    time = rep(c(1, 1, 5, 15, 44), 2)) \%>\%
+    mutate(allele = interaction(allele, locus))
 
 dataset <- fill_in_dataset(dataset_in)
 
 dataset$probability_new <-
-determine_probabilities_simple(dataset)$probability_new
+    determine_probabilities_simple(dataset)$probability_new
 
 estimate_new_infections(dataset)
-}
-\description{
-Compute the total new infection events for each subject by identifying
-peaks in the pan-locus new COI
+
 }

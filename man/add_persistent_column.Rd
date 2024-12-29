@@ -16,7 +16,7 @@ the allele has been observed before.
 }
 \description{
 Add a column with an indicator of whether an infection with the allele
-has occurred before
+has occurred before.
 }
 \examples{
 

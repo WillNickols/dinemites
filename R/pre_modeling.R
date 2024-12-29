@@ -11,15 +11,40 @@ check_alleles_unique_across_loci <- function(dataset) {
     }
 }
 
+check_alleles_same_across_subject_times <- function(dataset) {
+    alleles_by_time <- dataset %>%
+        dplyr::group_by(.data$time) %>%
+        dplyr::summarise(alleles = list(sort(unique(.data$allele))),
+                         .groups = "drop")
+
+    consistent_across_time <- alleles_by_time %>%
+        dplyr::summarise(all_same = length(unique(.data$alleles)) == 1) %>%
+        dplyr::pull(.data$all_same)
+
+    alleles_by_subject <- dataset %>%
+        dplyr::group_by(.data$subject) %>%
+        dplyr::summarise(alleles = list(sort(unique(.data$allele))), .groups = "drop")
+
+    consistent_across_subjects <- alleles_by_subject %>%
+        dplyr::summarise(all_same = length(unique(.data$alleles)) == 1) %>%
+        dplyr::pull(.data$all_same)
+
+    is_consistent <- consistent_across_time && consistent_across_subjects
+
+    if (!is_consistent) {
+        stop("All subject-times must have the same set of alleles")
+    }
+}
+
 #' fill_in_dataset
 #'
-#' Fill in zeros for a dataset that contains only alleles that were present
+#' Fill in zeros for a dataset that contains only alleles that were present.
 #'
 #' @export
 #' @param dataset A longitudinal dataset with columns `subject`, `time`,
 #' `allele.`
 #' One row should be present for each allele sequenced at the subject-time.
-#' All other subject-times should be included with allele as NA. A `locus`
+#' All other subject-times should be included with allele as `NA`. A `locus`
 #' column can also be specified to give each allele's locus.
 #' @return A data.frame with columns `subject`, `time`, `allele`, and `present`
 #' with `present` as 1 if the allele is present and 0 otherwise.
@@ -92,13 +117,12 @@ fill_in_dataset <- function(dataset) {
 #'
 #' @export
 #' @param dataset A complete longitudinal dataset with columns `subject`,
-#' `time`, `allele`, and `present`.
+#' `time`, `allele`, and `present`. Times that are qPCR positive only should
+#' already be included in the dataset with `present = 0`.
 #' @param qpcr_times A data.frame of qPCR positive only samples with columns
 #' `subject` and `time`
-#' @return The `dataset` augmented with `subject` and `time` values for
-#' qPCR positive only samples. In these rows, `present` will be set to 2 if
-#' there was not already an `allele` with `present == 1` in the input
-#' `dataset`.
+#' @return The `dataset` with `present` set to 2 for subject times in
+#' `qpcr_times` if there was not already an `allele` with `present == 1`
 #' @examples
 #'
 #' dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
@@ -125,6 +149,7 @@ add_qpcr_times <- function(dataset, qpcr_times) {
     }
 
     check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
 
     qpcr_times <- qpcr_times %>%
         dplyr::group_by(.data$subject) %>%
@@ -180,13 +205,14 @@ add_qpcr_times <- function(dataset, qpcr_times) {
 
 #' add_present_infection
 #'
-#' Add a column with an indicator of whether an infection is present at the time
+#' Add a column with an indicator of whether an infection is present at the
+#' time.
 #'
 #' @export
 #' @param dataset A complete longitudinal dataset with columns `allele`,
 #' `subject`, `time`, and `present.`
 #' @return The dataset with a new column `present_infection` (0/1) indicating
-#' whether an infection is present at the time
+#' whether an infection is present at the time.
 #' @examples
 #'
 #' dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
@@ -209,6 +235,7 @@ add_present_infection <- function(dataset) {
     }
 
     check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
 
     dataset <- dataset %>%
         dplyr::group_by(.data$subject, .data$time) %>%
@@ -222,7 +249,7 @@ add_present_infection <- function(dataset) {
 #' add_persistent_column
 #'
 #' Add a column with an indicator of whether an infection with the allele
-#' has occurred before
+#' has occurred before.
 #'
 #' @export
 #' @param dataset A complete longitudinal dataset with columns `allele`,
@@ -252,6 +279,7 @@ add_persistent_column <- function(dataset) {
     }
 
     check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
 
     dataset <- dataset %>%
         dplyr::group_by(.data$subject, .data$allele) %>%
@@ -265,7 +293,7 @@ add_persistent_column <- function(dataset) {
 
 #' add_persistent_infection
 #'
-#' Add a column with an indicator of whether an infection has occurred before
+#' Add a column with an indicator of whether an infection has occurred before.
 #'
 #' @export
 #' @param dataset A complete longitudinal dataset with columns `allele`,
@@ -295,6 +323,7 @@ add_persistent_infection <- function(dataset) {
     }
 
     check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
 
     dataset <- dataset %>%
         dplyr::group_by(.data$subject, .data$allele) %>%
@@ -310,7 +339,7 @@ add_persistent_infection <- function(dataset) {
 #' add_lag_column
 #'
 #' Add a column with an indicator of whether an infection with the allele
-#' has occurred in the last `lag_time` times
+#' has occurred in the last `lag_time` times.
 #'
 #' @export
 #' @param dataset A complete longitudinal dataset with columns `allele`,
@@ -318,7 +347,7 @@ add_persistent_infection <- function(dataset) {
 #' @param lag_time The time within which previous infections count towards the
 #' indicator
 #' @return The dataset with a new column `lag_[lag_time]` (0/1)
-#' indicating whether the allele has been observed in the last `lag_time` times
+#' indicating whether the allele has been observed in the last `lag_time` times.
 #' @examples
 #'
 #' dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
@@ -344,6 +373,7 @@ add_lag_column <- function(dataset, lag_time = 30) {
     }
 
     check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
 
     dataset <- dataset %>%
         dplyr::mutate(original_row_ordering = seq(nrow(dataset))) %>%
@@ -366,7 +396,7 @@ add_lag_column <- function(dataset, lag_time = 30) {
 #' add_lag_infection
 #'
 #' Add a column with an indicator of whether any infection
-#' has occurred in the last `lag_time` times
+#' has occurred in the last `lag_time` times.
 #'
 #' @export
 #' @param dataset A complete longitudinal dataset with columns `allele`,
@@ -375,7 +405,7 @@ add_lag_column <- function(dataset, lag_time = 30) {
 #' indicator
 #' @return The dataset with a new column `lag_infection_[lag_time]` (0/1)
 #' indicating whether any infection has been observed in the last `lag_time`
-#' times
+#' times.
 #' @examples
 #'
 #' dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
@@ -403,6 +433,7 @@ add_lag_infection <- function(dataset, lag_time = 30) {
     }
 
     check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
 
     dataset <- dataset %>%
         dplyr::mutate(original_row_ordering = seq(nrow(dataset))) %>%
@@ -422,12 +453,10 @@ add_lag_infection <- function(dataset, lag_time = 30) {
     return(dataset)
 }
 
-# After treatment but before next new infection, zero lag/persistent and add treatment covariate
-
 #' add_treatment_column
 #'
 #' Add columns with indicators of whether there is acute or longitudinal
-#' (any previous) treatment for the allele
+#' (any previous) treatment for the allele.
 #'
 #' @export
 #' @param dataset A complete longitudinal dataset with columns `allele`,
@@ -440,11 +469,13 @@ add_lag_infection <- function(dataset, lag_time = 30) {
 #' @param treatment_longitudinal_start Number of days after the treatment
 #' at which to mark the start of the longitudinal treatment phase, corresponding
 #' to when cleared variants will no longer be detected.
-#' @param verbose Print an update ever 10 subjects since this function can
+#' @param verbose Print an update every 10 subjects since this function can
 #' take some time.
 #' @return The dataset with new columns `treatment_acute` and
-#' `treatment_longitudinal` (0/1) indicating that the allele was treated in
-#' the last `treatment_longitudinal_start` days (acute) or ever (longitudinal).
+#' `treatment_longitudinal` (both 0/1) indicating that the infection
+#' was treated between `treatment_acute_start` (inclusive) and
+#' `treatment_longitudinal_start` (exclusive) times ago (acute) or at least
+#' `treatment_longitudinal_start` times ago (longitudinal).
 #' Columns for `persistent` and `lag_[#]` will be set to 0 for the allele
 #' after treatment until the next infection.
 #' @examples
@@ -491,6 +522,7 @@ add_treatment_column <- function(dataset,
     }
 
     check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
 
     dataset <- dataset %>%
         dplyr::mutate(original_row_ordering = seq(nrow(dataset)))
@@ -582,7 +614,7 @@ add_treatment_column <- function(dataset,
 #' add_treatment_infection
 #'
 #' Add columns with indicators of whether there is acute or longitudinal
-#' (any previous) treatment for any allele
+#' (any previous) treatment for any allele.
 #'
 #' @export
 #' @param dataset A complete longitudinal dataset with columns `allele`,
@@ -595,12 +627,13 @@ add_treatment_column <- function(dataset,
 #' @param treatment_longitudinal_start Number of days after the treatment
 #' at which to mark the start of the longitudinal treatment phase, corresponding
 #' to when cleared variants will no longer be detected.
-#' @param verbose Print an update ever 10 subjects since this function can
+#' @param verbose Print an update every 10 subjects since this function can
 #' take some time.
 #' @return The dataset with new columns `treatment_acute_infection` and
-#' `treatment_longitudinal_infection` (0/1) indicating that the infection was
-#' treated in
-#' the last `treatment_longitudinal_start` days (acute) or ever (longitudinal).
+#' `treatment_longitudinal_infection` (both 0/1) indicating that the infection
+#' was treated between `treatment_acute_start` (inclusive) and
+#' `treatment_longitudinal_start` (exclusive) times ago (acute) or at least
+#' `treatment_longitudinal_start` times ago (longitudinal).
 #' Columns for `persistent_infection` and `lag_infection_[#]` will be set to 0
 #' after treatment until the next infection.
 #' @examples
@@ -648,6 +681,7 @@ add_treatment_infection <- function(dataset,
     }
 
     check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
 
     dataset <- dataset %>%
         dplyr::mutate(original_row_ordering = seq(nrow(dataset)))
@@ -737,7 +771,7 @@ add_treatment_infection <- function(dataset,
 #' @param gap_size Alleles with first and last occurrences separated by
 #' at most `gap_size` will be included in the estimation
 #' @return Numeric vector with the estimated drop-out rate, the number of
-#' gap positions evaluated, and the number of alleles present in those gaps
+#' gap positions evaluated, and the number of alleles present in those gaps.
 #'
 #' @examples
 #' dataset_in <- data.frame(allele = c('A', 'B', NA, 'A', 'A'),
@@ -750,6 +784,7 @@ add_treatment_infection <- function(dataset,
 #' @import dplyr
 estimate_drop_out <- function(dataset, gap_size = 3) {
     check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
 
     gap_df <- dataset %>%
         dplyr::group_by(.data$subject, .data$allele) %>%

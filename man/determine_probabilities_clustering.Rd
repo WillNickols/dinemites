@@ -7,17 +7,17 @@
 determine_probabilities_clustering(dataset, refresh = 100, seed = 1)
 }
 \arguments{
-\item{dataset}{A complete longitudinal dataset with columns allele, subject,
-time, and present. All alleles must be included in the dataset for each
-subject and at each time.}
+\item{dataset}{A complete longitudinal dataset with columns \code{allele},
+\code{subject}, \code{time}, and \code{present.}}
 
 \item{refresh}{Stan updates will be printed every \code{refresh} steps}
 
 \item{seed}{Random seed for Stan}
 }
 \value{
-A named list with (1) \code{probability_new} as a 0/1 vector of whether
-the corresponding allele in the dataset was from a new infection and (2)
+A named list with (1) \code{probability_new} as a vector of the
+probabilities the corresponding alleles in the dataset were from new
+infections and (2)
 \code{fit} as the resulting parameters from the likelihood maximization
 procedure.
 }

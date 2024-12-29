@@ -12,10 +12,11 @@ add_present_infection(dataset)
 }
 \value{
 The dataset with a new column \code{present_infection} (0/1) indicating
-whether an infection is present at the time
+whether an infection is present at the time.
 }
 \description{
-Add a column with an indicator of whether an infection is present at the time
+Add a column with an indicator of whether an infection is present at the
+time.
 }
 \examples{
 

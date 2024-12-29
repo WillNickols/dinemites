@@ -15,7 +15,7 @@ The dataset with a new column \code{persistent_infection} (0/1)
 indicating whether any infection has been observed before.
 }
 \description{
-Add a column with an indicator of whether an infection has occurred before
+Add a column with an indicator of whether an infection has occurred before.
 }
 \examples{
 

@@ -17,12 +17,13 @@ per-locus COI at each time point across the loci and then sum the maxima
 (\code{max_then_sum}).}
 }
 \value{
-A dataframe with a \code{subject} column and a \code{new_COI} column
+A dataframe with a \code{subject} column and a \code{new_COI} column.
 }
 \description{
-Compute the total new COI deduplicated across loci for each subject by
-either summing across the loci and taking the max or maximizing the
-diversity on each day and then summing the maxima.
+Compute the total new complexity of infection (COI, number of unique
+genetic variants) deduplicated across loci for each subject by
+either summing across the loci and taking the maximum or maximizing the
+diversity on each day over the loci and then summing the maxima.
 }
 \examples{
 

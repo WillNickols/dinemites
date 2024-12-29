@@ -10,7 +10,7 @@ fill_in_dataset(dataset)
 \item{dataset}{A longitudinal dataset with columns \code{subject}, \code{time},
 \code{allele.}
 One row should be present for each allele sequenced at the subject-time.
-All other subject-times should be included with allele as NA. A \code{locus}
+All other subject-times should be included with allele as \code{NA}. A \code{locus}
 column can also be specified to give each allele's locus.}
 }
 \value{
@@ -18,7 +18,7 @@ A data.frame with columns \code{subject}, \code{time}, \code{allele}, and \code{
 with \code{present} as 1 if the allele is present and 0 otherwise.
 }
 \description{
-Fill in zeros for a dataset that contains only alleles that were present
+Fill in zeros for a dataset that contains only alleles that were present.
 }
 \examples{
 

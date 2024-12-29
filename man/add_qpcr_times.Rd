@@ -8,16 +8,15 @@ add_qpcr_times(dataset, qpcr_times)
 }
 \arguments{
 \item{dataset}{A complete longitudinal dataset with columns \code{subject},
-\code{time}, \code{allele}, and \code{present}.}
+\code{time}, \code{allele}, and \code{present}. Times that are qPCR positive only should
+already be included in the dataset with \code{present = 0}.}
 
 \item{qpcr_times}{A data.frame of qPCR positive only samples with columns
 \code{subject} and \code{time}}
 }
 \value{
-The \code{dataset} augmented with \code{subject} and \code{time} values for
-qPCR positive only samples. In these rows, \code{present} will be set to 2 if
-there was not already an \code{allele} with \code{present == 1} in the input
-\code{dataset}.
+The \code{dataset} with \code{present} set to 2 for subject times in
+\code{qpcr_times} if there was not already an \code{allele} with \code{present == 1}
 }
 \description{
 Add times that were only qPCR positive (without sequencing information) as

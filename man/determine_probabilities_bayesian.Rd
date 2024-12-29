@@ -20,9 +20,8 @@ determine_probabilities_bayesian(
 )
 }
 \arguments{
-\item{dataset}{A complete longitudinal dataset with columns allele, subject,
-time, and present. All alleles must be included in the dataset for each
-subject and at each time.}
+\item{dataset}{A complete longitudinal dataset with columns \code{allele},
+\code{subject}, \code{time}, and \code{present.}}
 
 \item{infection_persistence_covariates}{A character vector of column names
 in the dataset corresponding to covariates that increase only the
@@ -56,9 +55,9 @@ drop-out. This is recommended if more than 50\% of the alleles have dropped
 out.}
 }
 \value{
-A named list with (1) \code{probability_new} as a 0/1 vector of whether
-the corresponding allele in the dataset was from a new infection and (2)
-\code{fit} as the Stan model output.
+A named list with (1) \code{probability_new} as a vector of the
+probabilities the corresponding alleles in the dataset were from new
+infections and (2) \code{fit} as the Stan model output.
 }
 \description{
 Determine whether an allele is new or persistent using a Bayesian model.

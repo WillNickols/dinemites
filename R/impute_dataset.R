@@ -8,15 +8,15 @@
 #' `subject`, `time`, and `present`.
 #' @param n_imputations Number of imputed datasets to return
 #' @param k Maximum window size to consider when evaluating presence/absence
-#' patterns. k/2 time points on either side of the value to be imputed
+#' patterns. `k`/2 time points on either side of the value to be imputed
 #' are used to match the qPCR-only time point to complete data time points that
-#' could have generated such a pattern. By default, k will be the minimum of 9
+#' could have generated such a pattern. By default, `k` will be the minimum of 9
 #' and the average number of time points per subject.
 #' @param n_cores Number of cores to use when imputing datasets
-#' @param seed Random seed
-#' @return An nrow(dataset) by n_imputations matrix of 0s and 1s corresponding
-#' to the imputed values, one column per imputed dataset
+#' @return An `nrow(dataset)` by `n_imputations` matrix of 0s and 1s
+#' corresponding to the imputed values, one column per imputed dataset
 #'
+#' @examples
 #' dataset_in <- data.frame(allele = c('A', 'A', 'A', NA, NA, 'B', NA, 'B'),
 #'     subject = rep('A', 8),
 #'     time = c(1, 2, 3, 4, 5, 6, 7, 8))
@@ -36,10 +36,7 @@
 impute_dataset <- function(dataset,
                            n_imputations = 10,
                            k = NULL,
-                           n_cores = 1,
-                           seed = 1) {
-    set.seed(seed)
-
+                           n_cores = 1) {
     if (any(!c("allele", "subject", "time", "present") %in%
             colnames(dataset))) {
         stop("dataset must contain the columns:
@@ -47,6 +44,7 @@ impute_dataset <- function(dataset,
     }
 
     check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
 
     dataset <- dataset %>%
         dplyr::mutate(original_row_ordering = seq(nrow(dataset))) %>%

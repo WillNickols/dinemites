@@ -7,15 +7,14 @@
 determine_probabilities_simple(dataset, n_lags = 3, t_lag = Inf)
 }
 \arguments{
-\item{dataset}{A complete longitudinal dataset with columns allele, subject,
-time, and present. All alleles must be included in the dataset for each
-subject and at each time.}
+\item{dataset}{A complete longitudinal dataset with columns \code{allele},
+\code{subject}, \code{time}, and \code{present.}}
 
 \item{n_lags}{If the allele has been observed in both the last
-n_lags samples and the last t_lag times, it is considered new.}
+\code{n_lags} samples and the last \code{t_lag} times, it is considered new.}
 
 \item{t_lag}{If the allele has been observed in both the last
-n_lags samples and the last t_lag times, it is considered new.}
+\code{n_lags} samples and the last \code{t_lag} times, it is considered new.}
 }
 \value{
 A named list with (1) \code{probability_new} as a 0/1 vector of whether
@@ -25,9 +24,9 @@ the corresponding allele in the dataset was from a new infection and (2)
 \description{
 Determine whether an allele is new or persistent using a simple rule.
 For each subject, an allele is counted as new if it has not been observed in
-the n_lags most recent samples (e.g., visits) or in the t_lag most recent
+the \code{n_lags} most recent samples (e.g., visits) or in the \code{t_lag} most recent
 times (e.g., days). If the allele has been observed in both the last
-n_lags samples and the last t_lag times, it is considered new.
+\code{n_lags} samples and the last \code{t_lag} times, it is considered new.
 }
 \examples{
 
