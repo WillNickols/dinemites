@@ -25,7 +25,7 @@ has occurred in the last \code{lag_time} times
 
 dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
     subject = rep('A', 5),
-    time = c(1, 1, 2, 3, 4))
+    time = c(1, 1, 14, 28, 42))
 
 dataset <- fill_in_dataset(dataset_in)
 dataset <- add_present_infection(dataset)

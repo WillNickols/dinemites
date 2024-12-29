@@ -25,14 +25,13 @@
 #'
 #' dataset <- fill_in_dataset(dataset_in)
 #' dataset <- add_qpcr_times(dataset, qpcr_times)
-#' dataset <- dataset %>%
-#'     dplyr::arrange(subject, allele, time)
 #' imputed_mat <- impute_dataset(dataset)
 #' dataset$present_probability <- rowMeans(imputed_mat)
 #'
 #' @import dplyr
 #' @import doParallel
 #' @import foreach
+#' @import doRNG
 #'
 impute_dataset <- function(dataset,
                            n_imputations = 10,
@@ -49,12 +48,9 @@ impute_dataset <- function(dataset,
 
     check_alleles_unique_across_loci(dataset)
 
-    dataset_arranged <- dataset %>%
-        arrange(.data$subject, .data$allele, .data$time)
-
-    if (any(dataset_arranged != dataset, na.rm = T)) {
-        stop("dataset must be arranged by subject, allele, time")
-    }
+    dataset <- dataset %>%
+        dplyr::mutate(original_row_ordering = seq(nrow(dataset))) %>%
+        dplyr::arrange(.data$subject, .data$allele, .data$time)
 
     dataset_check <- dataset %>%
         group_by(.data$time, .data$subject) %>%
@@ -235,7 +231,7 @@ impute_dataset <- function(dataset,
 
     imputation_mat <- matrix(nrow = nrow(dataset), ncol = n_imputations)
     results <- foreach(i = 1:n_imputations,
-                       .packages = c('dplyr', 'reshape2')) %dopar% {
+                       .packages = c('dplyr', 'reshape2')) %dorng% {
         cat(paste0("Starting imputation: ", i, "\n"))
 
         # Initialize temporary storage for imputed values
@@ -329,6 +325,8 @@ impute_dataset <- function(dataset,
 
     # Stop the cluster
     parallel::stopCluster(cl)
+
+    imputation_mat <- imputation_mat[order(dataset$original_row_ordering),]
 
     return(imputation_mat)
 }

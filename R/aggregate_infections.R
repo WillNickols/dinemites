@@ -22,12 +22,8 @@
 #'     subject = rep('A', 10),
 #'     time = rep(c(1, 1, 5, 15, 44), 2)) %>%
 #'     mutate(allele = interaction(allele, locus))
-#' treatments <- data.frame(subject = c('A', 'B'),
-#'                          time = c(1, 29))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
-#' dataset <- dataset %>%
-#'     arrange(time, subject, allele)
 #'
 #' dataset$probability_new <-
 #'     determine_probabilities_simple(dataset)$probability_new
@@ -176,12 +172,8 @@ count_new_infections <- function(total_new,
 #'     subject = rep('A', 10),
 #'     time = rep(c(1, 1, 5, 15, 44), 2)) %>%
 #'     mutate(allele = interaction(allele, locus))
-#' treatments <- data.frame(subject = c('A', 'B'),
-#'                          time = c(1, 29))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
-#' dataset <- dataset %>%
-#'     arrange(time, subject, allele)
 #'
 #' dataset$probability_new <-
 #'     determine_probabilities_simple(dataset)$probability_new

@@ -9,8 +9,7 @@ determine_probabilities_simple(dataset, n_lags = 3, t_lag = Inf)
 \arguments{
 \item{dataset}{A complete longitudinal dataset with columns allele, subject,
 time, and present. All alleles must be included in the dataset for each
-subject and at each time. The dataset should  be arranged in the order:
-time, subject, allele.}
+subject and at each time.}
 
 \item{n_lags}{If the allele has been observed in both the last
 n_lags samples and the last t_lag times, it is considered new.}
@@ -32,14 +31,10 @@ n_lags samples and the last t_lag times, it is considered new.
 }
 \examples{
 
-library(dplyr)
 dataset <- data.frame(allele = rep(c('A', 'B', 'C', 'D', 'E'), 5),
     subject = rep('A', 25),
     time = rep(1:5, each = 5),
     present = c(0,0,0,0,0, 1,0,0,1,0, 1,0,0,0,0, 1,0,0,0,0, 0,0,0,0,0))
-
-dataset <- dataset \%>\%
-   arrange(time, subject, allele)
 
 dataset$probability_new <-
     determine_probabilities_simple(dataset)$probability_new

@@ -1,6 +1,7 @@
 package_vec = c("optparse", "tidyr", "mvtnorm", "devtools", "dplyr")
 invisible(suppressPackageStartupMessages(lapply(package_vec, require, character.only = TRUE)))
 library(dinemites)
+set.seed(1)
 
 simulation_type <- c("persistent",
                      "lag_30",
@@ -54,7 +55,7 @@ generate_synthetic_data_pois_time <- function(simulation_type,
 
     allele_set <- 1:nalleles
     abeta <- 1
-    bbeta <- 20
+    bbeta <- 40
 
     loci_corresponding <- rep(1:loci, each = nalleles / loci)
 
@@ -241,7 +242,7 @@ generate_synthetic_data_pois_time <- function(simulation_type,
 
             if ("treatment" %in% simulation_type) {
                 treatment_efficacy <- 0.9
-                is_treated <- length(unique(infected_alleles)) > 0 & runif(1) < 0.2
+                is_treated <- length(unique(infected_alleles)) > 0 & runif(1) < 0.1
                 if (is_treated) {
                     for (entry in seq(length(infection_events))) {
                         if (any(infection_events[[entry]]$time_points > time_point, na.rm = TRUE)) {
@@ -324,8 +325,8 @@ generate_synthetic_data_pois_time <- function(simulation_type,
 synth_data <- generate_synthetic_data_pois_time(simulation_type,
                                                 nsubjects = 5,
                                                 nalleles = 20,
-                                                nappointments = 15,
-                                                total_times = 200,
+                                                nappointments = 10,
+                                                total_times = 140,
                                                 gene_interaction = TRUE,
                                                 qPCR_only = 0.2,
                                                 drop_out = 0.2,

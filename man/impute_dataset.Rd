@@ -34,8 +34,6 @@ qpcr_times <- data.frame(subject = rep('A', 1), time = c(7))
 
 dataset <- fill_in_dataset(dataset_in)
 dataset <- add_qpcr_times(dataset, qpcr_times)
-dataset <- dataset \%>\%
-dplyr::arrange(subject, allele, time)
 imputed_mat <- impute_dataset(dataset)
 dataset$present_probability <- rowMeans(imputed_mat)
 }

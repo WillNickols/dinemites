@@ -43,11 +43,11 @@ Add columns with indicators of whether there is acute or longitudinal
 }
 \examples{
 
-dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
-     subject = rep('A', 5),
-     time = c(1, 1, 5, 15, 44))
-treatments <- data.frame(subject = c('A', 'B'),
-                         time = c(1, 29))
+dataset_in <- data.frame(allele = c('A', NA, NA, NA, 'B'),
+                         subject = rep('A', 5),
+                         time = c(1, 29, 30, 39, 50))
+treatments <- data.frame(subject = c('A'),
+                         time = c(29))
 
 dataset <- fill_in_dataset(dataset_in)
 dataset <- add_present_infection(dataset)

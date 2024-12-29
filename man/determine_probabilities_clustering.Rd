@@ -9,8 +9,7 @@ determine_probabilities_clustering(dataset, refresh = 100, seed = 1)
 \arguments{
 \item{dataset}{A complete longitudinal dataset with columns allele, subject,
 time, and present. All alleles must be included in the dataset for each
-subject and at each time. The dataset should  be arranged in the order:
-time, subject, allele.}
+subject and at each time.}
 
 \item{refresh}{Stan updates will be printed every \code{refresh} steps}
 

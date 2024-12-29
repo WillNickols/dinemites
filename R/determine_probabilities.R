@@ -13,8 +13,7 @@ inv_logit <- function(x) {
 #' @export
 #' @param dataset A complete longitudinal dataset with columns allele, subject,
 #' time, and present. All alleles must be included in the dataset for each
-#' subject and at each time. The dataset should  be arranged in the order:
-#' time, subject, allele.
+#' subject and at each time.
 #' @param n_lags If the allele has been observed in both the last
 #' n_lags samples and the last t_lag times, it is considered new.
 #' @param t_lag If the allele has been observed in both the last
@@ -24,14 +23,10 @@ inv_logit <- function(x) {
 #' `fit` as `NULL` (for consistency with the other models).
 #' @examples
 #'
-#' library(dplyr)
 #' dataset <- data.frame(allele = rep(c('A', 'B', 'C', 'D', 'E'), 5),
 #'     subject = rep('A', 25),
 #'     time = rep(1:5, each = 5),
 #'     present = c(0,0,0,0,0, 1,0,0,1,0, 1,0,0,0,0, 1,0,0,0,0, 0,0,0,0,0))
-#'
-#' dataset <- dataset %>%
-#'    arrange(time, subject, allele)
 #'
 #' dataset$probability_new <-
 #'     determine_probabilities_simple(dataset)$probability_new
@@ -61,12 +56,9 @@ determine_probabilities_simple <- function(dataset,
         stop("present column must be 0/1")
     }
 
-    ordered_dataset <- dataset %>%
+    dataset <- dataset %>%
+        dplyr::mutate(original_row_ordering = seq(nrow(dataset))) %>%
         dplyr::arrange(.data$time, .data$subject, .data$allele)
-
-    if (any(dataset != ordered_dataset)) {
-        stop("dataset must be arranged by time, subject, allele")
-    }
 
     if (nrow(dataset) == 0) {
         return(list(probability_new = numeric(0), fit = NULL))
@@ -95,7 +87,8 @@ determine_probabilities_simple <- function(dataset,
         ) %>%
         dplyr::ungroup() %>%
         dplyr::select(-.data$recent_present) %>%
-        dplyr::arrange(.data$time, .data$subject, .data$allele)
+        dplyr::arrange(.data$original_row_ordering) %>%
+        dplyr::select(-.data$original_row_ordering)
 
     return(list(probability_new = dataset$probabilities, fit = NULL))
 }
@@ -111,8 +104,7 @@ determine_probabilities_simple <- function(dataset,
 #' @export
 #' @param dataset A complete longitudinal dataset with columns allele, subject,
 #' time, and present. All alleles must be included in the dataset for each
-#' subject and at each time. The dataset should  be arranged in the order:
-#' time, subject, allele.
+#' subject and at each time.
 #' @param infection_persistence_covariates A character vector of column names
 #' in the dataset corresponding to covariates that increase only the
 #' probability of an infection being present due to a persistent infection.
@@ -179,12 +171,9 @@ determine_probabilities_bayesian <- function(dataset,
         stop("alleles_persistence_covariates columns must be numeric")
     }
 
-    ordered_dataset <- dataset %>%
+    dataset <- dataset %>%
+        dplyr::mutate(original_row_ordering = seq(nrow(dataset))) %>%
         dplyr::arrange(.data$time, .data$subject, .data$allele)
-
-    if (any(dataset != ordered_dataset)) {
-        stop("dataset must be arranged by time, subject, allele")
-    }
 
     subject_time_combinations <- unique(dataset[, c("subject", "time")])
 
@@ -455,6 +444,8 @@ determine_probabilities_bayesian <- function(dataset,
         probabilities_new[dataset_with_indices$original_row_index]
     probabilities_new <-
         ifelse(dataset_with_indices$present == 1, probabilities_new, NA)
+    probabilities_new <-
+        probabilities_new[order(dataset$original_row_ordering)]
 
     return(list(probability_new = probabilities_new, fit = fit))
 }
@@ -470,8 +461,7 @@ determine_probabilities_bayesian <- function(dataset,
 #' @export
 #' @param dataset A complete longitudinal dataset with columns allele, subject,
 #' time, and present. All alleles must be included in the dataset for each
-#' subject and at each time. The dataset should  be arranged in the order:
-#' time, subject, allele.
+#' subject and at each time.
 #' @param refresh Stan updates will be printed every `refresh` steps
 #' @param seed Random seed for Stan
 #' @return A named list with (1) `probability_new` as a 0/1 vector of whether
@@ -498,12 +488,9 @@ determine_probabilities_clustering <- function(dataset,
         stop("present column must be 0/1")
     }
 
-    ordered_dataset <- dataset %>%
+    dataset <- dataset %>%
+        dplyr::mutate(original_row_ordering = seq(nrow(dataset))) %>%
         dplyr::arrange(.data$time, .data$subject, .data$allele)
-
-    if (any(dataset != ordered_dataset)) {
-        stop("dataset must be arranged by time, subject, allele")
-    }
 
     if (nrow(dataset) == 0) {
         return(list(probability_new = numeric(0), fit = NULL))
@@ -721,6 +708,10 @@ determine_probabilities_clustering <- function(dataset,
 
     dataset$probabilities <-
         ifelse(dataset$present == 1, dataset$probabilities, NA)
+
+    dataset <- dataset %>%
+        dplyr::arrange(.data$original_row_ordering) %>%
+        dplyr::select(-.data$original_row_ordering)
 
     return(list(probability_new = dataset$probabilities, fit = NULL))
 }

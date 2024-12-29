@@ -40,8 +40,6 @@
 #'                          time = c(1, 29))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
-#' dataset <- dataset %>%
-#'    arrange(time, subject, allele)
 #'
 #' dataset$probability_new <-
 #'     determine_probabilities_simple(dataset)$probability_new
@@ -341,8 +339,6 @@ plot_single_subject <- function(subject,
 #'                          time = c(1, 29))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
-#' dataset <- dataset %>%
-#'    arrange(time, subject, allele)
 #'
 #' dataset$probability_new <-
 #'     determine_probabilities_simple(dataset)$probability_new

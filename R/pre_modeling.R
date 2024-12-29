@@ -214,8 +214,7 @@ add_present_infection <- function(dataset) {
         dplyr::group_by(.data$subject, .data$time) %>%
         dplyr::mutate(present_infection =
                           ifelse(any(.data$present != 0), 1, 0)) %>%
-        dplyr::ungroup() %>%
-        dplyr::arrange(.data$time, .data$subject, .data$allele)
+        dplyr::ungroup()
 
     return(dataset)
 }
@@ -259,8 +258,7 @@ add_persistent_column <- function(dataset) {
         dplyr::mutate(persistent =
             ifelse(.data$time >
                        min(.data$time[.data$present == 1], Inf), 1, 0)) %>%
-        dplyr::ungroup() %>%
-        dplyr::arrange(.data$time, .data$subject, .data$allele)
+        dplyr::ungroup()
 
     return(dataset)
 }
@@ -304,8 +302,7 @@ add_persistent_infection <- function(dataset) {
             ifelse(.data$time >
                        min(.data$time[.data$present_infection == 1], Inf),
                    1, 0)) %>%
-        dplyr::ungroup() %>%
-        dplyr::arrange(.data$time, .data$subject, .data$allele)
+        dplyr::ungroup()
 
     return(dataset)
 }
@@ -326,7 +323,7 @@ add_persistent_infection <- function(dataset) {
 #'
 #' dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
 #'     subject = rep('A', 5),
-#'     time = c(1, 1, 2, 3, 4))
+#'     time = c(1, 1, 14, 28, 42))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
 #' dataset <- add_present_infection(dataset)
@@ -349,6 +346,7 @@ add_lag_column <- function(dataset, lag_time = 30) {
     check_alleles_unique_across_loci(dataset)
 
     dataset <- dataset %>%
+        dplyr::mutate(original_row_ordering = seq(nrow(dataset))) %>%
         dplyr::arrange(.data$subject, .data$time) %>%
         dplyr::group_by(.data$subject, .data$allele) %>%
         dplyr::mutate(lag = ifelse(sapply(.data$time, function(t) {
@@ -356,7 +354,8 @@ add_lag_column <- function(dataset, lag_time = 30) {
                                   .data$time < t] == 1)
         }), 1, 0)) %>%
         dplyr::ungroup() %>%
-        dplyr::arrange(.data$time, .data$subject, .data$allele)
+        dplyr::arrange(.data$original_row_ordering) %>%
+        dplyr::select(-.data$original_row_ordering)
 
     colnames(dataset)[colnames(dataset) == 'lag'] <-
         paste0('lag_', lag_time, collapse = '')
@@ -381,7 +380,7 @@ add_lag_column <- function(dataset, lag_time = 30) {
 #'
 #' dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
 #'     subject = rep('A', 5),
-#'     time = c(1, 1, 2, 3, 4))
+#'     time = c(1, 1, 14, 28, 42))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
 #' dataset <- add_present_infection(dataset)
@@ -406,6 +405,7 @@ add_lag_infection <- function(dataset, lag_time = 30) {
     check_alleles_unique_across_loci(dataset)
 
     dataset <- dataset %>%
+        dplyr::mutate(original_row_ordering = seq(nrow(dataset))) %>%
         dplyr::arrange(.data$subject, .data$time) %>%
         dplyr::group_by(.data$subject, .data$allele) %>%
         dplyr::mutate(lag_infection = ifelse(sapply(.data$time, function(t) {
@@ -413,7 +413,8 @@ add_lag_infection <- function(dataset, lag_time = 30) {
                                       .data$time < t] == 1)
         }), 1, 0)) %>%
         dplyr::ungroup() %>%
-        dplyr::arrange(.data$time, .data$subject, .data$allele)
+        dplyr::arrange(.data$original_row_ordering) %>%
+        dplyr::select(-.data$original_row_ordering)
 
     colnames(dataset)[colnames(dataset) == 'lag_infection'] <-
         paste0('lag_infection_', lag_time, collapse = '')
@@ -448,11 +449,11 @@ add_lag_infection <- function(dataset, lag_time = 30) {
 #' after treatment until the next infection.
 #' @examples
 #'
-#' dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
-#'      subject = rep('A', 5),
-#'      time = c(1, 1, 5, 15, 44))
-#' treatments <- data.frame(subject = c('A', 'B'),
-#'                          time = c(1, 29))
+#' dataset_in <- data.frame(allele = c('A', NA, NA, NA, 'B'),
+#'                          subject = rep('A', 5),
+#'                          time = c(1, 29, 30, 39, 50))
+#' treatments <- data.frame(subject = c('A'),
+#'                          time = c(29))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
 #' dataset <- add_present_infection(dataset)
@@ -483,13 +484,16 @@ add_treatment_column <- function(dataset,
                 Columns for treatment should be added after persistent and lag')
     }
 
-    check_alleles_unique_across_loci(dataset)
-
     if (any(c('treatment_acute', 'treatment_longitudinal') %in%
             colnames(dataset))) {
         stop("treatment_acute and treatment_longitudinal
              should not be columns of the input dataset")
     }
+
+    check_alleles_unique_across_loci(dataset)
+
+    dataset <- dataset %>%
+        dplyr::mutate(original_row_ordering = seq(nrow(dataset)))
 
     dataset$treatment_acute <- 0
     dataset$treatment_longitudinal <- 0
@@ -569,7 +573,8 @@ add_treatment_column <- function(dataset,
     }
 
     dataset <- dataset %>%
-        dplyr::arrange(.data$time, .data$subject, .data$allele)
+        dplyr::arrange(.data$original_row_ordering) %>%
+        dplyr::select(-.data$original_row_ordering)
 
     return(dataset)
 }
@@ -600,11 +605,11 @@ add_treatment_column <- function(dataset,
 #' after treatment until the next infection.
 #' @examples
 #'
-#' dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
-#'      subject = rep('A', 5),
-#'      time = c(1, 1, 5, 15, 44))
-#' treatments <- data.frame(subject = c('A', 'B'),
-#'                          time = c(1, 29))
+#' dataset_in <- data.frame(allele = c('A', NA, NA, NA, 'B'),
+#'                          subject = rep('A', 5),
+#'                          time = c(1, 29, 30, 39, 50))
+#' treatments <- data.frame(subject = c('A'),
+#'                          time = c(29))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
 #' dataset <- add_present_infection(dataset)
@@ -643,6 +648,9 @@ add_treatment_infection <- function(dataset,
     }
 
     check_alleles_unique_across_loci(dataset)
+
+    dataset <- dataset %>%
+        dplyr::mutate(original_row_ordering = seq(nrow(dataset)))
 
     dataset$treatment_acute_infection <- 0
     dataset$treatment_longitudinal_infection <- 0
@@ -709,6 +717,11 @@ add_treatment_infection <- function(dataset,
                 grepl("^persistent_infection", colnames(dataset_tmp_1))] <- 0
         dataset[dataset$subject == subject_current,] <- dataset_tmp_1
     }
+
+    dataset <- dataset %>%
+        dplyr::arrange(.data$original_row_ordering) %>%
+        dplyr::select(-.data$original_row_ordering)
+
     return(dataset)
 }
 
