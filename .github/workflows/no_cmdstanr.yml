@@ -24,7 +24,7 @@ on:
   push:
   pull_request:
 
-name: build and test
+name: build and test without cmdstanr
 
 env:
   has_testthat: 'true'
