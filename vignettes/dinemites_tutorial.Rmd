@@ -1,5 +1,5 @@
 ---
-title: "DiNeMITeS Tutorial"
+title: "DINEMITES Tutorial"
 author:
 - name: William Nickols
   email: willnickols@g.harvard.edu
@@ -12,14 +12,14 @@ vignette: >
 
 ## Introduction ##
 
-**DiNeMITes** (**Di**stinguishing **Ne**w **M**alaria **I**nfections in 
+**DINEMITES** (**Di**stinguishing **Ne**w **M**alaria **I**nfections in 
 **T**im**e** **S**eries) is a comprehensive R package for distinguishing
 new from persistent infections in longitudinal sequencing data. It is intended
 for use with longitudinal malaria studies, but it can be applied to any 
 longitudinal data in which people can acquire a disease with multiple variants
 multiple times.
 
-If you use the DiNeMITeS software, please cite our work:
+If you use the DINEMITES software, please cite our work:
 
 > William A. Nickols, Philipp Schwalb, Daniel Neafsey. In progress:
 Statistical models distinguish new malaria infections in time series sequencing
@@ -31,11 +31,12 @@ https://github.com/WillNickols/dinemites/issues.
 
 ## Contents
 * [1. Installing R](#installing-r)
-* [2. Installing DiNeMITeS](#installing-dinemites)
+* [2. Installing DINEMITES](#installing-dinemites)
 * [3. Distinguishing new infections](#distinguishing-new-infections)
-    * [3.1 DiNeMITeS input](#dinemites-input)
-    * [3.2 Setting up covariates](#setting-up-covariates)
-    * [3.3 Running models](#running-models)
+    * [3.1 DINEMITES input](#dinemites-input)
+    * [3.2 Imputing qPCR only time points](#imputing-qpcr-only-time-points)
+    * [3.3 Setting up covariates](#setting-up-covariates)
+    * [3.4 Running models](#running-models)
 * [4. Analyzing results](#analyzing-results)
 
 ## 1. Installing R {#installing-r}
@@ -68,7 +69,7 @@ is not required for this tutorial.
 #### Important: the correct R version
 
 If you already have R installed, then it is possible that the R version
-you have does not support DiNeMITeS The easiest way to check this is to
+you have does not support DINEMITES The easiest way to check this is to
 launch R/RStudio, and in the console ("Console" pane in RStudio), type
 in the following command (without the `>` symbol):
 
@@ -84,7 +85,7 @@ For example:
 R version 4.4.1 (2024-06-14)
 ```
 
-For DiNeMITeS to install, you will need R >= 3.4. If your version is
+For DINEMITES to install, you will need R >= 3.4. If your version is
 older than that, please refer to section [Installing R for the first
 time](#installing-r-for-the-first-time) to download the latest R. Note
 that RStudio users will need to have RStudio "switch" to this later
@@ -95,9 +96,9 @@ Either way, once you have the correct version installed, launch the
 software and use `sessionInfo()` to make sure that you indeed have R >=
 3.4.
 
-## 2. Installing DiNeMITeS {#installing-dinemites}
+## 2. Installing DINEMITES {#installing-dinemites}
 
-**Before installing DiNeMITeS**, `cmdstanr` must be installed. To do so, run 
+**Before installing DINEMITES**, `cmdstanr` must be installed. To do so, run 
 the following commands:
 ```{r, eval=FALSE}
 install.packages("cmdstanr", 
@@ -106,11 +107,184 @@ install.packages("cmdstanr",
 cmdstanr::install_cmdstan()
 ```
 
-Then, the latest version of DiNeMITes can be installed from GitHub.
+Then, the latest version of DINEMITES can be installed from GitHub.
 ```{r, eval=FALSE, cache = FALSE}
 if (!require("devtools", quietly = TRUE))
     install.packages("devtools")
 
-devtools::install("WillNickols/dinemites")
+devtools::install_github("WillNickols/dinemites")
 ```
+
+## 3. Distinguishing new infections {#distinguishing-new-infections}
+
+### 3.1 DINEMITES input
+
+#### Sequencing input
+
+At a minimum, DINEMITES requires a data frame of sequenced infections with the 
+columns `allele`, `time`, and `subject`. The `allele` column should have the
+name of the genetic variant sequenced in the sample (e.g., `A206G`, 
+`pfama1.21`, `11`). The `time` column should be a numeric value denoting when
+the sample was collected (typically the number of days since the start of
+the study). The `subject` column should be a subject identifier for the
+person who contributed the sample. If multiple variants are detected at the
+same time point for the same person, there should be multiple rows with the
+same `subject` and `time` but different values in `allele`. If some samples
+do not have any sequenced variants (i.e., no infection), rows should be
+included with the corresponding `time` and `subject` but `NA` in the `allele`
+column. **If samples without infections are not included, the downstream
+results could be very biased.** If multiple loci are sequenced, the locus
+name of the allele should be included in the `locus` column. Allele names should
+still be unique even across loci. In this data 
+frame, other sample-specific information can be included including covariates
+that affect the rate at which a person becomes infected (`season`, LLIN
+usage, etc.). 
+
+Here, we'll use a synthetic dataset of 5 subjects sequenced at 2 loci created
+to compactly illustrate the features of DINEMITES.
+
+```{r, echo=F}
+suppressPackageStartupMessages(library(dinemites))
+suppressPackageStartupMessages(library(dplyr))
+```
+
+```{r}
+dataset <- read.csv(system.file(package="dinemites","extdata","dataset.tsv"), 
+                    header = TRUE, sep="\t")
+```
+
+```{r, echo=F, }
+head(dataset, 6) %>%
+    knitr::kable() %>%
+    kableExtra::scroll_box(height = "200px", extra_css = "border: none;") %>%
+    kableExtra::kable_styling("striped", full_width = F, position = 'center')
+```
+
+```{r, echo=F}
+tail(dataset, 6) %>%
+    knitr::kable() %>%
+    kableExtra::kable_styling("striped", full_width = F, position = 'center') %>%
+    kableExtra::scroll_box(height = "200px", extra_css = "border: none;")
+```
+
+The function `fill_in_dataset` then takes the dataset and turns it into
+its complete format by creating a row for each allele for each subject 
+and time and adding a `present` column that is 0 or 1 depending on whether
+the allele was absent or present:
+
+```{r}
+dataset <- fill_in_dataset(dataset)
+```
+
+```{r, echo=F}
+head(dataset, 100) %>%
+    knitr::kable() %>%
+    kableExtra::scroll_box(height = "200px", extra_css = "border: none;") %>%
+    kableExtra::kable_styling("striped", full_width = F, position = 'center')
+```
+
+#### qPCR only input
+
+If some time points are known to have infections but don't have sequencing
+information (e.g., because ultrasensitive qPCR was used before sequencing),
+these points can be included as a data frame with columns `subject` and `time`.
+These points should also be included in the original data frame with `allele`
+set to `NA`.
+
+```{r}
+qPCR_only <- read.csv(system.file(package="dinemites","extdata","qPCR_only.tsv"), 
+                      header = TRUE, sep="\t")
+```
+
+```{r, echo=F}
+head(qPCR_only, 6) %>%
+    knitr::kable() %>%
+    kableExtra::kable_styling("striped", full_width = F, position = 'center') %>%
+    kableExtra::scroll_box(height = "200px", extra_css = "border: none;")
+```
+
+These qPCR-only time points are then added to the dataset, where
+they replace the `present` values for all alleles at the corresponding
+subject time with the value `2`.
+```{r}
+dataset <- add_qpcr_times(dataset, qpcr_times = qPCR_only)
+```
+
+```{r, echo=F}
+dataset %>%
+    filter(present == 2) %>%
+    head(n = 6) %>%
+    knitr::kable() %>%
+    kableExtra::kable_styling("striped", full_width = F, position = 'center') %>%
+    kableExtra::scroll_box(height = "200px", extra_css = "border: none;")
+```
+
+#### Treatments
+
+Additionally, a data frame of treatments can be provided with a `subject`
+and `time` column indicating when individuals were treated for infections. 
+The treatments included in this data frame should only be those expected
+to clear malaria infections (not simply treating fever etc.).
+
+```{r}
+treatments <- read.csv(system.file(package="dinemites","extdata","treatments.tsv"), 
+                       header = TRUE, sep="\t")
+```
+
+```{r, echo=F}
+head(treatments, 6) %>%
+    knitr::kable() %>%
+    kableExtra::kable_styling("striped", full_width = F, position = 'center') %>%
+    kableExtra::scroll_box(height = "100px", extra_css = "border: none;")
+```
+
+#### Data visualization
+
+We can visualize the infection time series for one of the subjects using
+the `plot_single_subject` function. In the plot below, each X indicates
+the presence of a sequenced parasite allele, and they are connected by
+colored lines if the same allele is observed multiple times. The red line
+indicates that a qPCR-only infection occurred on day 109, and the blue line
+indicates that the person received treatment on day 140.
+
+```{r, fig.align='center', fig.width=7, fig.height=4}
+plot_single_subject(3, dataset, treatments)
+```
+
+### 3.2 Imputing qPCR only time points {#imputing-qpcr-only-time-points}
+
+When some time points are only known to be qPCR positive, multiple
+imputation is used to create multiple datasets with the
+qPCR positive time points replaced probabilistically by specific alleles. 
+Multiple imputation is a widely used statistical technique to handle missing
+data by generating multiple copies of the dataset with the missing values
+replaced by values imputed from the rest of the data.
+In this multiple imputation, alleles are inferred based on which alleles 
+were present at the other, sequenced time points for the subject, using 
+patterns learned from parts of the dataset with complete sequencing data.
+
+```{r, fig.align='center', fig.width=7, fig.height=4}
+set.seed(1)
+n_imputations <- 10
+imputed_datasets <- impute_dataset(dataset, 
+                                   n_imputations = n_imputations, 
+                                   verbose = FALSE)
+dataset$probability_present <- rowMeans(imputed_datasets)
+plot_single_subject(3, dataset, treatments)
+```
+
+In the plot, we see that the ambiguous infection on day 109 has been imputed
+to consist of specific alleles (the opacity `alpha` is equal to the
+proportion of times the allele is imputed to be present). 
+The alleles that occur both before and after day 109 are
+imputed to be present most confidently while those not seen after day 93 are
+less confidently imputed.
+
+### 3.3 Setting up covariates {#setting-up-covariates}
+
+### 3.4 Running models {#running-models}
+
+Estimate drop-out
+
+
 

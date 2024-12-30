@@ -60,22 +60,28 @@ compute_total_new_COI <- function(dataset, method = 'sum_then_max') {
             dplyr::group_by(.data$subject, .data$locus, .data$time) %>%
             dplyr::summarise(
                 sum_first = sum(.data$probability_present *
-                                    .data$probability_new, na.rm=T)) %>%
+                                    .data$probability_new, na.rm=T),
+                .groups = "drop") %>%
             dplyr::group_by(.data$subject, .data$locus) %>%
-            dplyr::summarise(sum_second = sum(.data$sum_first, na.rm = T)) %>%
+            dplyr::summarise(sum_second = sum(.data$sum_first, na.rm = T),
+                             .groups = "drop") %>%
             dplyr::group_by(.data$subject) %>%
-            dplyr::summarise(new_COI = max(.data$sum_second, 0, na.rm=T))
+            dplyr::summarise(new_COI = max(.data$sum_second, 0, na.rm=T),
+                             .groups = "drop")
     } else if (method == 'max_then_sum') {
         new_COI_out <- dataset %>%
             dplyr::group_by(.data$subject, .data$locus, .data$time) %>%
             dplyr::summarise(
                 sum_first = sum(.data$probability_present *
-                                    .data$probability_new, na.rm=T)) %>%
+                                    .data$probability_new, na.rm=T),
+                .groups = "drop") %>%
             dplyr::group_by(.data$subject, .data$time) %>%
             dplyr::summarise(
-                max_second = max(.data$sum_first, 0, na.rm = T)) %>%
+                max_second = max(.data$sum_first, 0, na.rm = T),
+                .groups = "drop") %>%
             dplyr::group_by(.data$subject) %>%
-            dplyr::summarise(new_COI = sum(.data$max_second, na.rm=T))
+            dplyr::summarise(new_COI = sum(.data$max_second, na.rm=T),
+                             .groups = "drop")
     }
 
     return(new_COI_out)
@@ -230,7 +236,8 @@ estimate_new_infections <- function(dataset) {
                                    .data$probability_present > 0.1], 2), 0),
                        max(min(.data$probability_new[
                            .data$probability_present > 0], 2), 0)),
-             max_prob = max(.data$probability_present)) %>%
+             max_prob = max(.data$probability_present),
+            .groups = "drop") %>%
         dplyr::mutate(min_new = ifelse(.data$min_new == 2, 0, .data$min_new)) %>%
         dplyr::mutate(
             min_new_weighted = ifelse(.data$min_new_weighted == 2,
@@ -254,7 +261,8 @@ estimate_new_infections <- function(dataset) {
                 .data$max_new_weighted[!is.na(.data$total_new)],
                 .data$min_new[!is.na(.data$total_new)],
                 .data$min_new_weighted[!is.na(.data$total_new)],
-                .data$max_prob[!is.na(.data$total_new)]))
+                .data$max_prob[!is.na(.data$total_new)]),
+            .groups = "drop")
 
     return(new_infections)
 }

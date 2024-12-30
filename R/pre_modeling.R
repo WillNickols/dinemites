@@ -3,7 +3,8 @@ check_alleles_unique_across_loci <- function(dataset) {
         if (any((dataset %>%
                  dplyr::filter(!is.na(.data$allele)) %>%
                  dplyr::group_by(.data$allele) %>%
-                 dplyr::summarize(n_loci = length(unique(.data$locus))))$n_loci
+                 dplyr::summarize(n_loci = length(unique(.data$locus)),
+                                  .groups = "drop"))$n_loci
                 > 1)) {
             stop(paste0("alleles at different loci must not share names,",
                         " consider appending the locus name to the allele"))

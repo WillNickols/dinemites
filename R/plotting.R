@@ -154,8 +154,8 @@ plot_single_subject <- function(subject,
                 dplyr::group_by(.data$time) %>%
                 dplyr::summarise(total_new =
                     sum((.data$probability_present * .data$probability_new)[
-                        .data$probability_present > 0])) %>%
-                dplyr::ungroup()
+                        .data$probability_present > 0]),
+                    .groups = "drop")
 
             p1 <- ggplot(tmp_df_new_COI,
                          aes(x = .data$time,
@@ -370,7 +370,8 @@ plot_dataset <- function(dataset,
         dplyr::filter(any(.data$present == 1)) %>%
         dplyr::ungroup() %>%
         dplyr::group_by(.data$allele) %>%
-        dplyr::summarise(mean(.data$present == 1))
+        dplyr::summarise(mean(.data$present == 1),
+                         .groups = "drop")
 
     colnames(freq_df) <- c("allele", "prevalence")
 

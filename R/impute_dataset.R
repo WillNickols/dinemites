@@ -13,6 +13,7 @@
 #' could have generated such a pattern. By default, `k` will be the minimum of 9
 #' and the average number of time points per subject.
 #' @param n_cores Number of cores to use when imputing datasets
+#' @param verbose Whether to print updates during imputation
 #' @return An `nrow(dataset)` by `n_imputations` matrix of 0s and 1s
 #' corresponding to the imputed values, one column per imputed dataset
 #'
@@ -36,7 +37,8 @@
 impute_dataset <- function(dataset,
                            n_imputations = 10,
                            k = NULL,
-                           n_cores = 1) {
+                           n_cores = 1,
+                           verbose = TRUE) {
     if (any(!c("allele", "subject", "time", "present") %in%
             colnames(dataset))) {
         stop("dataset must contain the columns:
@@ -52,7 +54,8 @@ impute_dataset <- function(dataset,
 
     dataset_check <- dataset %>%
         group_by(.data$time, .data$subject) %>%
-        summarize(checked = all(.data$present == 2) == any(.data$present == 2))
+        summarize(checked = all(.data$present == 2) == any(.data$present == 2),
+                  .groups = "drop")
     if (any(!dataset_check$checked)) {
         stop(paste0("dataset not valid: all alleles should have",
             " present = 2 on a subject-time if any do"))
@@ -146,7 +149,9 @@ impute_dataset <- function(dataset,
     comparison_table_list <- list()
     break_now <- FALSE
     for (k_sub in 1:(k+1)) {
-        message(paste0("Generating matches for k = ", k_sub))
+        if (verbose) {
+            message(paste0("Generating matches for k = ", k_sub))
+        }
         k_column_submatrices_list <- list()
         k_column_submatrices_list_counter <- 1
         for (subject_cur in unique(dataset$subject)) {
@@ -223,15 +228,15 @@ impute_dataset <- function(dataset,
     dataset <- dataset %>%
         arrange(.data$subject, .data$allele, .data$time)
 
-    cat(paste0("Creating imputations"))
+    if (verbose) {
+        message("Creating imputations")
+    }
     cl <- parallel::makeCluster(n_cores)
     registerDoParallel(cl)
 
     imputation_mat <- matrix(nrow = nrow(dataset), ncol = n_imputations)
     results <- foreach(i = 1:n_imputations,
                        .packages = c('dplyr', 'reshape2')) %dorng% {
-        cat(paste0("Starting imputation: ", i, "\n"))
-
         # Initialize temporary storage for imputed values
         imputed_vals <- c()
 
