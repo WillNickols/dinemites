@@ -38,6 +38,10 @@ https://github.com/WillNickols/dinemites/issues.
     * [3.3 Setting up covariates](#setting-up-covariates)
     * [3.4 Running models](#running-models)
 * [4. Analyzing results](#analyzing-results)
+    * [4.1 Merging probabilities](#merging-probabilities)
+    * [4.2 New complexity of infection](#new-complexity-of-infection)
+    * [4.3 New infections](#new-infections)
+    * [4.4 Data visualization](#data-visualization)
 
 ## 1. Installing R {#installing-r}
 
@@ -58,7 +62,7 @@ You can download and install the free R software environment
 latest release - this will ensure the R version you have is compatible
 with MaAsLin 3.
 
-#### (Optional) the RStudio IDE
+#### The RStudio IDE
 
 [RStudio](https://rstudio.com/products/rstudio/) is a freely available
 IDE (integrated development environment) for R. It is a "wrapper" around
@@ -143,12 +147,9 @@ usage, etc.).
 Here, we'll use a synthetic dataset of 5 subjects sequenced at 2 loci created
 to compactly illustrate the features of DINEMITES.
 
-```{r, echo=F}
+```{r}
 suppressPackageStartupMessages(library(dinemites))
 suppressPackageStartupMessages(library(dplyr))
-```
-
-```{r}
 dataset <- read.csv(system.file(package="dinemites","extdata","dataset.tsv"), 
                     header = TRUE, sep="\t")
 ```
@@ -282,9 +283,281 @@ less confidently imputed.
 
 ### 3.3 Setting up covariates {#setting-up-covariates}
 
+DINEMITES includes three models for distinguishing old from persistent
+infections: a Bayesian model, a clustering model, and a simple model. The simple
+model and clustering model do not use information beyond allele presence
+and absence patterns, but the
+Bayesian model relies on modeling the rate at which infections occur newly
+and after previous infections. To this end, a variety of covariates can
+be included that affect the probability an infection will be observed at a
+given time for a given subject. The following code adds columns, for each 
+imputed dataset:
+
+1. `add_present_infection`: Adds an indicator of whether there is an infection
+from any allele.
+2. `add_persistent_column`: Adds an indicator of whether there has been an
+infection with each row's allele before that time. This corresponds to the
+intuition that the probability of observing an allele at any point in the
+future might be higher than at baseline because the parasite might still be
+present, even if not typically detectable.
+3. `add_persistent_infection`: Adds an indicator of whether there has been an
+infection from any allele before that row's time.
+4. `add_lag_column`: Adds an indicator of whether there has been an infection
+with each row's allele in the last `30` (default) days. This corresponds to the
+intuition that the probability of observing an allele again shortly after 
+observing the allele is higher than at baseline because the parasite is likely
+still present. 
+5. `add_lag_infection`: Adds an indicator of whether there has been an infection
+with any row's allele in the last `30` (default) days.
+6. `add_treatment_column`: Adds indicators of whether there was treatment
+for the row's allele between 1 and 10 days ago (default) for the 
+`treatment_acute` column and 10 or more days ago (default) for the
+`treatment_longitudinal` column. This also sets the `persistent` and `lag_30`
+columns generated in (2) and (4) to 0 after treatment. This corresponds
+to the intuition that being treated should clear out parasites and therefore
+return the person to having no infections. However, the new columns allow
+the Bayesian model to account for incomplete clearance either shortly after
+or substantially after treatment.
+7. `add_treatment_infection`: Adds indicators of whether there was treatment
+for any allele between 1 and 10 days ago (default) for the 
+`treatment_acute_infection` column and 10 or more days ago (default) for the
+`treatment_longitudinal_infection` column. This also sets the 
+`persistent_infection` and `lag_infection_30`
+columns generated in (2) and (4) to 0 after treatment.
+
+For each of these functions, the `column` version is specific to the allele 
+(i.e., was this allele observed recently?) while the `infection` version
+applies to an infection by any allele (i.e., was any infection observed
+recently?). The functions `add_persistent_[column/infection]` should only be 
+called once, but `add_lag_[column/infection]` can be called multiple times
+with different `lag_time` parameters to specify different time intervals
+over which there might be different probabilities of observing a persistent
+allele (e.g., 30, 60, and 90 days).
+
+```{r}
+library(doParallel)
+library(foreach)
+library(doRNG)
+
+# Can replace with more cores if available
+n_cores <- ifelse(detectCores() > 1, 2, 1)
+cl <- makeCluster(n_cores)
+registerDoParallel(cl)
+
+# Store imputed datasets with resulting covariates as a list
+datasets <- foreach(i = 1:n_imputations, 
+                    .packages = c('dinemites', 'dplyr')) %dopar% {
+    # Copy original dataset and use the ith imputed vaules
+    dataset_tmp <- dataset
+    dataset_tmp$present <- imputed_datasets[,i]
+
+    # Add all covariates for that imputed dataset
+    dataset_tmp <- dataset_tmp %>%
+        add_present_infection() %>%
+        add_persistent_column() %>%
+        add_persistent_infection() %>%
+        add_lag_column() %>%
+        add_lag_infection() %>%
+        add_treatment_column(treatments = treatments, verbose = F) %>%
+        add_treatment_infection(treatments = treatments, verbose = F)
+    
+    dataset_tmp
+}
+
+stopCluster(cl)
+```
+
 ### 3.4 Running models {#running-models}
 
-Estimate drop-out
+New infections can be identified with three models that assign a
+probability (including 0 or 1) to each observed allele of being from a new
+infection. Except for the Bayesian model in the non-default drop-out mode
+(more later), these are probabilities the observed allele is from a new
+infection relative to its last observation (if any). That is, if a single 
+infection spans two visits and an allele is only picked up on the second
+visit, this is classified as new rather than persistent (though
+alleles that were sequenced on both days would likely be classified as
+persistent).
+
+#### Simple model
+
+The first model for distinguishing new from persistent infections is a
+simple rule that counts an allele as new if it has not been observed in
+the `n_lags` most recent samples (e.g., visits) or in the `t_lag` most recent
+times (e.g., days). If the allele has been observed in both the last
+`n_lags` samples and the last `t_lag` times, it is considered new.
+
+```{r}
+n_cores <- ifelse(detectCores() > 1, 2, 1)
+cl <- makeCluster(n_cores)
+registerDoParallel(cl)
+
+# Run the simple model for each dataset and store the probabilities
+# in a matrix, one column for each imputation
+probabilities_simple_mat <-
+    foreach(i = 1:n_imputations, 
+            .combine = cbind, 
+            .packages = c('dinemites', 'dplyr')) %dopar% {
+    probabilities_simple <- determine_probabilities_simple(datasets[[i]])
+    probabilities_simple$probability_new
+}
+
+stopCluster(cl)
+```
+
+#### Bayesian model
+
+The second model for distinguishing new from persistent infections is a
+Bayesian model that models the rate at which new infections are acquired and
+the rate at which any infections (both new and persistent) and uses laws
+of conditional probability to find the probability an allele is new. The
+model is parameterized with general covariates that affect the rate at which
+new infections are acquired (the season, LLIN usage, etc.) and persistence
+covariates that affect how likely a persistent infection is to be observed
+again (whether the allele has ever been observed, has been observed in the
+last 30 days, etc.). A model is fit in Stan, and the posterior coefficient
+draws are used to estimate the probability each allele is new. The model
+will run with covariates taking on any values, but the model fits much faster
+when the covariates take only one of a few values (e.g., 0/1 indicators)
+by collapsing redundant observations in the likelihood function.
+
+This model uses the covariates created in [section 3.3](#setting-up-covariates)
+and should take a few minutes to run. The fit probabilities can also be
+read in from 
+`system.file(package = "dinemites", "extdata", "probabilities_bayesian_mat.tsv")`.
+
+Note: The Bayesian model can be run with `drop_out = TRUE` to allow alleles
+to be classified as persistent even if they have never been observed before
+due to sequencing drop-out. This is primarily intended for cases in which the
+estimated sequencing drop-out is above 50%, which can be estimated with
+`estimate_drop_out`.
+
+```{r}
+estimate_drop_out(dataset)
+
+if (instantiate::stan_cmdstan_exists()) {
+    n_cores <- ifelse(detectCores() > 1, 2, 1)
+    cl <- makeCluster(n_cores)
+    registerDoParallel(cl)
+    
+    probabilities_bayesian_mat <-
+        foreach(i = 1:n_imputations, 
+                .combine = cbind, 
+                .packages = c('dinemites', 'dplyr')) %dorng% {
+        probabilities_bayesian <- determine_probabilities_bayesian(
+            dataset = datasets[[i]],
+            infection_persistence_covariates =
+                c("persistent_infection",
+                  "lag_infection_30",
+                  "treatment_acute_infection",
+                  "treatment_longitudinal_infection"),
+            infection_general_covariates =
+                c("season"),
+            alleles_persistence_covariates =
+                c("persistent",
+                  "lag_30",
+                  "treatment_acute",
+                  "treatment_longitudinal"))
+        
+        probabilities_bayesian$probability_new
+        }
+    
+    stopCluster(cl)
+} else {
+    probabilities_bayesian_mat <- read.csv(system.file(package = "dinemites",
+            "extdata",
+            "probabilities_bayesian_mat.tsv"), 
+        header = FALSE, 
+        sep="\t")
+}
+```
+
+#### Clustering model
+
+The third model for distinguishing new from persistent infections is a 
+clustering model that, for each subject, clusters alleles according to
+co-occurrence, finds optimal probabilities each allele is present in each 
+cluster and each cluster is present at each time point, uses these to calculate
+the probability an allele is new.
+
+```{r}
+if (instantiate::stan_cmdstan_exists()) {
+    n_cores <- ifelse(detectCores() > 1, 2, 1)
+    cl <- makeCluster(n_cores)
+    registerDoParallel(cl)
+    
+    probabilities_clustering_mat <-
+        foreach(i = 1:n_imputations, 
+                .combine = cbind, 
+                .packages = c('dinemites', 'dplyr')) %dorng% {
+            probabilities_clustering <- 
+                determine_probabilities_clustering(dataset = datasets[[i]])
+            probabilities_clustering$probability_new
+    }
+
+    stopCluster(cl)
+} else {
+    probabilities_clustering_mat <- read.csv(system.file(package = "dinemites",
+            "extdata",
+            "probabilities_clustering_mat.tsv"), 
+        header = FALSE, 
+        sep="\t")
+}
+```
+
+## 4. Analyzing results {#analyzing-results}
+
+### 4.1 Merging probabilities {#merging-probabilities}
+
+First, we will add the probabilities to the dataset:
+```{r}
+dataset <- dataset %>%
+    dplyr::mutate(probability_clustering = 
+                      rowMeans(probabilities_clustering_mat, na.rm = T),
+                  probability_bayesian = 
+                      rowMeans(probabilities_bayesian_mat, na.rm = T))
+```
+
+We want one consensus probability rather than two columns of probabilities,
+so we will use the `merge_probability_columns` to combine the results from
+the Bayesian model and the clustering model. This function takes the average
+of the probabilities within the threshold (`0.3` by default) and allows
+us to select probabilities manually if they are sufficiently discordant.
+To ensure this file knits, we will just set `probability_new` to the
+Bayesian probabilities, but when run in an interactive session (e.g., Rstudio),
+running `merge_probability_columns` will display each discordant row and a plot
+highlighting the discordant value and ask the user to choose a probability. To
+try this, copy the chunk with `merge_probability_columns` into the console
+and run it.
+
+```{r}
+dataset <- dataset %>% dplyr::mutate(probability_new = probability_bayesian)
+```
+
+```{r, eval = FALSE}
+dataset <- merge_probability_columns(dataset, 
+    c('probability_clustering', 'probability_bayesian'), 
+    threshold = 0.3)
+```
+
+### 4.2 New complexity of infection {#new-complexity-of-infection}
+
+With probabilities assigned to each allele observation, we can now compute
+the new complexity of infection (COI) on each day: the number of unique genetic
+variants (i.e., parasite variants) new to each day. When only a single locus
+is used, we simply sum the probabilities the alleles are new at each day
+to get the new COI. When there are multiple loci, adding across the loci would
+overcount because alleles at different loci might correspond to the same
+parasite.
+
+### 4.3 New infections {#new-infections}
+
+### 4.4 Data visualization {#data-visualization}
+
+
+
+
+
 
 
 

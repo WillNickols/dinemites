@@ -4,7 +4,13 @@
 \alias{impute_dataset}
 \title{impute_dataset}
 \usage{
-impute_dataset(dataset, n_imputations = 10, k = NULL, n_cores = 1)
+impute_dataset(
+  dataset,
+  n_imputations = 10,
+  k = NULL,
+  n_cores = 1,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{dataset}{A complete longitudinal dataset with columns \code{allele},
@@ -19,6 +25,8 @@ could have generated such a pattern. By default, \code{k} will be the minimum of
 and the average number of time points per subject.}
 
 \item{n_cores}{Number of cores to use when imputing datasets}
+
+\item{verbose}{Whether to print updates during imputation}
 }
 \value{
 An \code{nrow(dataset)} by \code{n_imputations} matrix of 0s and 1s

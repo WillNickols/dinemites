@@ -1,3 +1,102 @@
+#' merge_probability_columns
+#'
+#' Take two columns of probabilities in the dataset and merge them by taking
+#' the average if they are close or manually selecting when the probabilities
+#' are discordant. Probabilities can be selected manually by typing "f" (first
+#' probability), "s" (second probability), or a numeric value between 0 and 1.
+#' This function should only be run in an interactive session or it will
+#'
+#' @export
+#' @param dataset A complete longitudinal dataset with columns `allele`,
+#' `subject`, `time`, `present`, and `probability_present` if using imputed
+#' data. This dataset should also contain columns with names given by
+#' `cols_to_merge`.
+#' @param cols_to_merge Which columns of probabilities in `dataset` to merge.
+#' @param threshold Probabilities within `threshold` will be averaged
+#' rather than manually selected.
+#' @return The `dataset` with the column `probability_new` given by
+#' the average of the two columns when the two
+#' columns are within `threshold` of each other and the manually chosen value
+#' otherwise.
+#'
+merge_probability_columns <- function(dataset, cols_to_merge, threshold = 0.3) {
+    if (length(cols_to_merge) != 2) {
+        stop("cols_to_merge must have length 2")
+    }
+
+    check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
+
+    prob_abs_diffs <-
+        abs(dataset[,cols_to_merge[1]] - dataset[,cols_to_merge[2]])
+
+    if (!all(is.na(dataset[,cols_to_merge[1]]) ==
+             is.na(dataset[,cols_to_merge[2]]))) {
+        warning(paste0("The two probability columns do not have",
+                       " NAs in the same positions"))
+    }
+
+    message(paste0(sum(prob_abs_diffs > threshold & !is.na(prob_abs_diffs)),
+                   " discordant probabilities to be chosen manually."))
+
+    prob_merged <- (dataset[,cols_to_merge[1]] + dataset[,cols_to_merge[2]]) / 2
+
+    # For plotting
+    dataset$probability_new <- prob_merged
+    dataset$probability_new[
+        which(prob_abs_diffs > threshold & !is.na(prob_abs_diffs))] <- NA
+
+    # Run manual selection
+    for (index in which(prob_abs_diffs > threshold & !is.na(prob_abs_diffs))) {
+        plot_out <-
+            plot_single_subject(dataset$subject[index],
+                                dataset,
+                                highlight_index = index)
+        print(plot_out)
+        print(dataset[index,])
+        read_val <- readline(prompt =
+            paste0("Choose probability: ",
+            cols_to_merge[1],
+            " (",
+            round(dataset[index,cols_to_merge[1]], 3),
+            ") (f), ",
+            cols_to_merge[2],
+            " (",
+            round(dataset[index,cols_to_merge[2]], 3),
+            ") (s), ",
+            "other (value 0-1): "))
+        read_val <- dplyr::case_when(
+            read_val == 'f' ~ dataset[index,cols_to_merge[1]],
+            read_val == 's' ~ dataset[index,cols_to_merge[2]],
+            TRUE ~ tryCatch(as.numeric(read_val), warning = function(w) {NA}))
+        prob_merged[index] <- read_val
+        counter <- 1
+        while ((prob_merged[index] > 1 |
+               prob_merged[index] < 0 |
+               is.na(prob_merged[index])) &
+               counter <= 3) {
+            prob_merged[index] <-
+                readline(prompt =
+                    "Choose again: first (f), second (s), other (value 0-1): ")
+            read_val <- dplyr::case_when(
+                read_val == 'f' ~ dataset[index,cols_to_merge[1]],
+                read_val == 's' ~ dataset[index,cols_to_merge[2]],
+                TRUE ~ tryCatch(as.numeric(read_val),
+                                warning = function(w) {NA}))
+            prob_merged[index] <- read_val
+            counter <- counter + 1
+        }
+        if (counter > 3) {
+            prob_merged[index] <- NA
+            warning(
+                "valid probability was not entered in 3 tries, moving on...")
+        }
+    }
+
+    dataset$probability_new <- prob_merged
+    return(dataset)
+}
+
 #' compute_total_new_COI
 #'
 #' Compute the total new complexity of infection (COI, number of unique
@@ -53,6 +152,10 @@ compute_total_new_COI <- function(dataset, method = 'sum_then_max') {
 
     if (!method %in% c("sum_then_max", "max_then_sum")) {
         stop("method must be sum_then_max or max_then_sum")
+    }
+
+    if (any(is.na(dataset$probability_new) & dataset$probability_present > 0)) {
+        stop("probability_new is NA at a row in which probability_present > 0")
     }
 
     if (method == 'sum_then_max') {
@@ -205,6 +308,10 @@ estimate_new_infections <- function(dataset) {
 
     check_alleles_unique_across_loci(dataset)
     check_alleles_same_across_subject_times(dataset)
+
+    if (any(is.na(dataset$probability_new) & dataset$probability_present > 0)) {
+        stop("probability_new is NA at a row in which probability_present > 0")
+    }
 
     new_infections <- dataset %>%
         dplyr::group_by(.data$subject, .data$time) %>%

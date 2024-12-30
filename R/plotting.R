@@ -31,6 +31,7 @@
 #' @param output File to which the plot should be saved
 #' @param height Height of the output plot
 #' @param width Width of the output plot
+#' @param highlight_index Index to highlight
 #' @return A plot object from ggplot2 showing the infection course for the
 #' subject
 #'
@@ -58,7 +59,8 @@ plot_single_subject <- function(subject,
                                 no_imputation = FALSE,
                                 output = NULL,
                                 height = 6,
-                                width = 8) {
+                                width = 8,
+                                highlight_index = NULL) {
     if (any(!c("allele", "subject", "time", "present") %in%
             colnames(dataset))) {
         stop("dataset must contain the columns:
@@ -73,6 +75,10 @@ plot_single_subject <- function(subject,
     if (no_imputation) {
         dataset$probability_present <-
             ifelse(dataset$present == 2, 0, dataset$probability_present)
+    }
+    if (!is.null(highlight_index)) {
+        dataset$highlight_index <- FALSE
+        dataset$highlight_index[highlight_index] <- TRUE
     }
 
     subject_current <- subject
@@ -110,7 +116,8 @@ plot_single_subject <- function(subject,
                        ifelse(.data$probability_new > 0.5, 16, 21))) %>%
                 mutate(
                     probability_label = ifelse(.data$probability_new < 0.8 &
-                       .data$probability_new > 0.2 & .data$present == 1,
+                       .data$probability_new > 0.2 & .data$present == 1 &
+                           !is.na(.data$probability_new),
                        paste0(round(100 * .data$probability_new),
                               "%   "), "")) %>%
                 group_by(.data$allele) %>%
@@ -151,6 +158,7 @@ plot_single_subject <- function(subject,
 
         if ("probability_new" %in% colnames(tmp_df)) {
             tmp_df_new_COI <- tmp_df %>%
+                dplyr::filter(!is.na(.data$probability_new)) %>%
                 dplyr::group_by(.data$time) %>%
                 dplyr::summarise(total_new =
                     sum((.data$probability_present * .data$probability_new)[
@@ -219,7 +227,20 @@ plot_single_subject <- function(subject,
             geom_vline(xintercept = treatments[
                 treatments$subject == subject_current,]$time,
                 color = 'blue',
-                linetype = '33') +
+                linetype = '33')
+
+        if (!is.null(highlight_index)) {
+            p2 <- p2  + geom_label(
+                data = tmp_df %>% dplyr::filter(.data$highlight_index),
+                aes(label = '  '),
+                label.padding = unit(0.2, "lines"),
+                label.size = 1,
+                fill = "white",
+                color = "black"
+            )
+        }
+
+        p2 <- p2 +
             ggnewscale::new_scale_fill() +
             geom_line(aes(color = .data$allele,
                           group = .data$allele,

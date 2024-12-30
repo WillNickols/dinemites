@@ -11,7 +11,8 @@ plot_single_subject(
   no_imputation = FALSE,
   output = NULL,
   height = 6,
-  width = 8
+  width = 8,
+  highlight_index = NULL
 )
 }
 \arguments{
@@ -34,6 +35,8 @@ prevalence, \code{prevalence} should be a column.}
 \item{height}{Height of the output plot}
 
 \item{width}{Width of the output plot}
+
+\item{highlight_index}{Index to highlight}
 }
 \value{
 A plot object from ggplot2 showing the infection course for the
