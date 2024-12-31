@@ -35,5 +35,7 @@ callr::r(
   stderr = "2>&1"
 )
 if (instantiate:::stan_on_windows()) {
-    stop(instantiate::stan_package_model_files(path = bin_stan))
+    stop(instantiate::stan_package_model(
+        name = "model_infection_probabilities_clusters",
+        package = "dinemites"))
 }

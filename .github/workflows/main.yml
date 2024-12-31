@@ -1,160 +1,160 @@
-## Read more about GitHub actions the features of this GitHub Actions workflow
-## at https://lcolladotor.github.io/biocthis/articles/biocthis.html#use_bioc_github_action
-##
-## For more details, check the biocthis developer notes vignette at
-## https://lcolladotor.github.io/biocthis/articles/biocthis_dev_notes.html
-##
-## You can add this workflow to other packages using:
-## > biocthis::use_bioc_github_action()
-##
-## Using GitHub Actions exposes you to many details about how R packages are
-## compiled and installed in several operating system.s
-### If you need help, please follow the steps listed at
-## https://github.com/r-lib/actions#where-to-find-help
-##
-## If you found an issue specific to biocthis's GHA workflow, please report it
-## with the information that will make it easier for others to help you.
-## Thank you!
+# ## Read more about GitHub actions the features of this GitHub Actions workflow
+# ## at https://lcolladotor.github.io/biocthis/articles/biocthis.html#use_bioc_github_action
+# ##
+# ## For more details, check the biocthis developer notes vignette at
+# ## https://lcolladotor.github.io/biocthis/articles/biocthis_dev_notes.html
+# ##
+# ## You can add this workflow to other packages using:
+# ## > biocthis::use_bioc_github_action()
+# ##
+# ## Using GitHub Actions exposes you to many details about how R packages are
+# ## compiled and installed in several operating system.s
+# ### If you need help, please follow the steps listed at
+# ## https://github.com/r-lib/actions#where-to-find-help
+# ##
+# ## If you found an issue specific to biocthis's GHA workflow, please report it
+# ## with the information that will make it easier for others to help you.
+# ## Thank you!
 
-## Acronyms:
-## * GHA: GitHub Action
-## * OS: operating system
+# ## Acronyms:
+# ## * GHA: GitHub Action
+# ## * OS: operating system
 
-on:
-  push:
-  pull_request:
+# on:
+#   push:
+#   pull_request:
 
-name: build and test
+# name: build and test
 
-env:
-  has_testthat: 'true'
+# env:
+#   has_testthat: 'true'
 
-jobs:
-  build-check:
-    runs-on: ${{ matrix.config.os }}
-    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
-    container: ${{ matrix.config.cont }}
-    ## Environment variables unique to this job.
+# jobs:
+#   build-check:
+#     runs-on: ${{ matrix.config.os }}
+#     name: ${{ matrix.config.os }} (${{ matrix.config.r }})
+#     container: ${{ matrix.config.cont }}
+#     ## Environment variables unique to this job.
 
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-          - { os: ubuntu-latest }
-          - { os: macOS-latest }
-          - { os: windows-latest }
-    env:
-      R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
-      NOT_CRAN: true
-      TZ: UTC
+#     strategy:
+#       fail-fast: false
+#       matrix:
+#         config:
+#           - { os: ubuntu-latest }
+#           - { os: macOS-latest }
+#           - { os: windows-latest }
+#     env:
+#       R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
+#       NOT_CRAN: true
+#       TZ: UTC
 
-    steps:
-      ## Most of these steps are the same as the ones in
-      ## https://github.com/r-lib/actions/blob/master/examples/check-standard.yaml
-      ## If they update their steps, we will also need to update ours.
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+#     steps:
+#       ## Most of these steps are the same as the ones in
+#       ## https://github.com/r-lib/actions/blob/master/examples/check-standard.yaml
+#       ## If they update their steps, we will also need to update ours.
+#       - name: Checkout Repository
+#         uses: actions/checkout@v3
 
-      - name: Setup R from r-lib
-        uses: r-lib/actions/setup-r@v2
+#       - name: Setup R from r-lib
+#         uses: r-lib/actions/setup-r@v2
 
-      - name: Setup pandoc from r-lib
-        uses: r-lib/actions/setup-pandoc@v2
+#       - name: Setup pandoc from r-lib
+#         uses: r-lib/actions/setup-pandoc@v2
 
-      - name: Query dependencies
-        run: |
-          install.packages('remotes')
-          saveRDS(remotes::dev_package_deps(dependencies = TRUE), ".github/depends.Rds", version = 2)
-        shell: Rscript {0}
+#       - name: Query dependencies
+#         run: |
+#           install.packages('remotes')
+#           saveRDS(remotes::dev_package_deps(dependencies = TRUE), ".github/depends.Rds", version = 2)
+#         shell: Rscript {0}
         
-      - name: Install Linux system dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update -y && sudo apt-get install -y make cmake libicu-dev zlib1g-dev pandoc libcurl4-openssl-dev libfontconfig1-dev
+#       - name: Install Linux system dependencies
+#         if: runner.os == 'Linux'
+#         run: |
+#           sudo apt-get update -y && sudo apt-get install -y make cmake libicu-dev zlib1g-dev pandoc libcurl4-openssl-dev libfontconfig1-dev
 
-      - name: Install macOS system dependencies
-        if: matrix.config.os == 'macOS-latest'
-        run: |
-          ## Enable installing XML from source if needed
-          brew install libxml2
-          echo "XML_CONFIG=/usr/local/opt/libxml2/bin/xml2-config" >> $GITHUB_ENV
+#       - name: Install macOS system dependencies
+#         if: matrix.config.os == 'macOS-latest'
+#         run: |
+#           ## Enable installing XML from source if needed
+#           brew install libxml2
+#           echo "XML_CONFIG=/usr/local/opt/libxml2/bin/xml2-config" >> $GITHUB_ENV
 
-          ## Required to install magick as noted at
-          ## https://github.com/r-lib/usethis/commit/f1f1e0d10c1ebc75fd4c18fa7e2de4551fd9978f#diff-9bfee71065492f63457918efcd912cf2
-          brew install imagemagick@6
+#           ## Required to install magick as noted at
+#           ## https://github.com/r-lib/usethis/commit/f1f1e0d10c1ebc75fd4c18fa7e2de4551fd9978f#diff-9bfee71065492f63457918efcd912cf2
+#           brew install imagemagick@6
 
-          ## For textshaping, required by ragg, and required by pkgdown
-          brew install harfbuzz fribidi
+#           ## For textshaping, required by ragg, and required by pkgdown
+#           brew install harfbuzz fribidi
 
-          ## For installing usethis's dependency gert
-          brew install libgit2
+#           ## For installing usethis's dependency gert
+#           brew install libgit2
 
-          ## Required for tcltk
-          brew install xquartz --cask
+#           ## Required for tcltk
+#           brew install xquartz --cask
 
-      - name: Install Windows system dependencies
-        if: runner.os == 'Windows'
-        run: |
-          ## Edit below if you have any Windows system dependencies
-        shell: Rscript {0}
+#       - name: Install Windows system dependencies
+#         if: runner.os == 'Windows'
+#         run: |
+#           ## Edit below if you have any Windows system dependencies
+#         shell: Rscript {0}
 
-      - name: Install dependencies pass 1
-        run: |
-          ## Try installing the package dependencies in steps. First the local
-          ## dependencies, then any remaining dependencies to avoid the
-          ## issues described at
-          ## https://stat.ethz.ch/pipermail/bioc-devel/2020-April/016675.html
-          ## https://github.com/r-lib/remotes/issues/296
-          ## Ideally, all dependencies should get installed in the first pass.
+#       - name: Install dependencies pass 1
+#         run: |
+#           ## Try installing the package dependencies in steps. First the local
+#           ## dependencies, then any remaining dependencies to avoid the
+#           ## issues described at
+#           ## https://stat.ethz.ch/pipermail/bioc-devel/2020-April/016675.html
+#           ## https://github.com/r-lib/remotes/issues/296
+#           ## Ideally, all dependencies should get installed in the first pass.
 
-          ## For running the checks
-          message(paste('****', Sys.time(), 'installing rcmdcheck ****'))
-          install.packages(c("rcmdcheck"))
+#           ## For running the checks
+#           message(paste('****', Sys.time(), 'installing rcmdcheck ****'))
+#           install.packages(c("rcmdcheck"))
 
-          ## Pass #1 at installing dependencies
-          message(paste('****', Sys.time(), 'pass number 1 at installing dependencies: local dependencies ****'))
-          remotes::install_local(dependencies = TRUE, repos = c('https://stan-dev.r-universe.dev', getOption("repos")), build_vignettes = FALSE, upgrade = TRUE)
-        continue-on-error: true
-        shell: Rscript {0}
+#           ## Pass #1 at installing dependencies
+#           message(paste('****', Sys.time(), 'pass number 1 at installing dependencies: local dependencies ****'))
+#           remotes::install_local(dependencies = TRUE, repos = c('https://stan-dev.r-universe.dev', getOption("repos")), build_vignettes = FALSE, upgrade = TRUE)
+#         continue-on-error: true
+#         shell: Rscript {0}
 
-      - name: Install dependencies pass 2
-        run: |
-          ## Pass #2 at installing dependencies
-          message(paste('****', Sys.time(), 'pass number 2 at installing dependencies: any remaining dependencies ****'))
-          remotes::install_local(dependencies = TRUE, build_vignettes = TRUE, upgrade = TRUE, force = TRUE)
-        shell: Rscript {0}
+#       - name: Install dependencies pass 2
+#         run: |
+#           ## Pass #2 at installing dependencies
+#           message(paste('****', Sys.time(), 'pass number 2 at installing dependencies: any remaining dependencies ****'))
+#           remotes::install_local(dependencies = TRUE, build_vignettes = TRUE, upgrade = TRUE, force = TRUE)
+#         shell: Rscript {0}
 
-      - name: Install cmdstanr
-        run: |
-          ## Pass #3 to install cmdstanr
-          message(paste('****', Sys.time(), 'pass number 3 at installing dependencies: cmdstanr ****'))
-          install.packages("cmdstanr", repos = c('https://stan-dev.r-universe.dev', getOption("repos")))
-          cmdstanr::check_cmdstan_toolchain(fix = TRUE)
-          cmdstanr::install_cmdstan(release_url = 'https://github.com/stan-dev/cmdstan/releases/download/v2.35.0/cmdstan-2.35.0.tar.gz')
-        shell: Rscript {0}
+#       - name: Install cmdstanr
+#         run: |
+#           ## Pass #3 to install cmdstanr
+#           message(paste('****', Sys.time(), 'pass number 3 at installing dependencies: cmdstanr ****'))
+#           install.packages("cmdstanr", repos = c('https://stan-dev.r-universe.dev', getOption("repos")))
+#           cmdstanr::check_cmdstan_toolchain(fix = TRUE)
+#           cmdstanr::install_cmdstan(release_url = 'https://github.com/stan-dev/cmdstan/releases/download/v2.35.0/cmdstan-2.35.0.tar.gz')
+#         shell: Rscript {0}
 
-      - name: Session info
-        run: |
-          options(width = 100)
-          pkgs <- installed.packages()[, "Package"]
-          sessioninfo::session_info(pkgs, include_base = TRUE)
-        shell: Rscript {0}
+#       - name: Session info
+#         run: |
+#           options(width = 100)
+#           pkgs <- installed.packages()[, "Package"]
+#           sessioninfo::session_info(pkgs, include_base = TRUE)
+#         shell: Rscript {0}
 
-      - name: Run CMD check
-        env:
-          _R_CHECK_CRAN_INCOMING_: false
-          DISPLAY: 99.0
-        run: |
-          options(crayon.enabled = TRUE)
-          rcmdcheck::rcmdcheck(
-              args = c("--no-manual", "--no-vignettes", "--timings"),
-              build_args = c("--no-manual", "--keep-empty-dirs", "--no-resave-data"),
-              error_on = "warning",
-              check_dir = "check"
-          )
-        shell: Rscript {0}
+#       - name: Run CMD check
+#         env:
+#           _R_CHECK_CRAN_INCOMING_: false
+#           DISPLAY: 99.0
+#         run: |
+#           options(crayon.enabled = TRUE)
+#           rcmdcheck::rcmdcheck(
+#               args = c("--no-manual", "--no-vignettes", "--timings"),
+#               build_args = c("--no-manual", "--keep-empty-dirs", "--no-resave-data"),
+#               error_on = "warning",
+#               check_dir = "check"
+#           )
+#         shell: Rscript {0}
 
-      ## Might need an to add this to the if:  && runner.os == 'Linux'
-      - name: Reveal testthat details
-        if:  env.has_testthat == 'true'
-        run: find . -name testthat.Rout -exec cat '{}' ';'
+#       ## Might need an to add this to the if:  && runner.os == 'Linux'
+#       - name: Reveal testthat details
+#         if:  env.has_testthat == 'true'
+#         run: find . -name testthat.Rout -exec cat '{}' ';'
