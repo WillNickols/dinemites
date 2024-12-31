@@ -48,12 +48,7 @@ https://github.com/WillNickols/dinemites/issues.
 [R](https://www.r-project.org/) is a programming language specializing
 in statistical computing and graphics. You can use R just the same as
 any other programming languages, but it is most useful for statistical
-analyses, with well-established packages for common tasks such as
-[linear
-modeling](https://cran.r-project.org/web/packages/lme4/index.html),
-['omic data analysis](https://bioconductor.org/), [machine
-learning](http://topepo.github.io/caret/index.html), and
-[visualization](https://ggplot2.tidyverse.org/).
+analyses.
 
 #### Installing R for the first time
 
@@ -239,7 +234,7 @@ head(treatments, 6) %>%
     kableExtra::scroll_box(height = "100px", extra_css = "border: none;")
 ```
 
-#### Data visualization
+#### Time series visualization
 
 We can visualize the infection time series for one of the subjects using
 the `plot_single_subject` function. In the plot below, each X indicates
@@ -542,19 +537,81 @@ dataset <- merge_probability_columns(dataset,
 
 ### 4.2 New complexity of infection {#new-complexity-of-infection}
 
-With probabilities assigned to each allele observation, we can now compute
-the new complexity of infection (COI) on each day: the number of unique genetic
-variants (i.e., parasite variants) new to each day. When only a single locus
-is used, we simply sum the probabilities the alleles are new at each day
-to get the new COI. When there are multiple loci, adding across the loci would
+When only one locus is sequenced, the new complexity of infection (COI) is 
+simply 
+estimated by the sum of: for each allele, the probability the allele is new 
+multiplied by the probability the allele is present (1 if sequenced and 
+present, 0 if not present, between 0 and 1 if imputed).
+
+When there are multiple loci, adding across the loci would
 overcount because alleles at different loci might correspond to the same
-parasite.
+parasite. Therefore, two counting procedures are implemented. Both start by, 
+for each individual, for each locus at each time point, taking the sum across 
+the alleles of the probability the allele is new multiplied by the probability 
+the allele is present. Then, the two procedures do the following:
+
+* `sum_then_max`: For each locus, sum these sums across all time points. 
+Then, take the maximum of the per-locus sums.
+* `max_then_sum`: For each time point, take the maximum of the sums. 
+Then, sum the maxima over the time points.
+
+The `sum_then_max` method ensures that drop-out in alleles at different loci at 
+different times does not result in double counting. The `max_then_sum`
+method ensures that 
+if different infections have different diversities at the different loci, 
+the different infections are all counted in full. Typically, `max_then_sum`
+should only be used if the sequencing is very accurate (<20\% drop-out). 
+
+These can be specified as `method` in `compute_total_new_COI`:
+
+```{r}
+compute_total_new_COI(dataset, method = 'sum_then_max') %>%
+    knitr::kable() %>%
+    kableExtra::scroll_box(height = "200px", extra_css = "border: none;") %>%
+    kableExtra::kable_styling("striped", full_width = F, position = 'center')
+```
 
 ### 4.3 New infections {#new-infections}
 
+Additionally, the number of new infections can be estimated based on the
+sequencing data. The number of new infections is estimated by counting
+the number of peaks in the pan-locus new COI and then accounting for the
+maximum and minimum novelty throughout the peaks. Sometimes, the estimated
+new infections might appear unexpectedly high, but this is typically because
+there are many time points with moderate-low probabilities of new infections
+that add up. We estimate the number of new infections with 
+`estimate_new_infections`.
+
+```{r}
+estimate_new_infections(dataset) %>%
+    knitr::kable() %>%
+    kableExtra::scroll_box(height = "200px", extra_css = "border: none;") %>%
+    kableExtra::kable_styling("striped", full_width = F, position = 'center')
+```
+
+Typically, the estimated new infections and/or the total new COI are the
+key covariates of interest from a study using this type of data.
+
 ### 4.4 Data visualization {#data-visualization}
 
+The results can be visualized for an individual subject with 
+`plot_single_subject` or for all subjects with `plot_dataset`. The function
+`plot_dataset` also shows the prevalence of each allele (proportion of 
+sequencing-positive samples in which the allele was present) to the right. As
+before, red lines indicate qPCR-only time points, and blue lines indicate 
+treatment. Black dots indicate the allele was new with a probability >50\%.
+Open dotes indicate the allele was new with a probability <50\%. If the dots 
+are not annotated, the probabilities are >80\% or <20\% respectively, and all 
+other dots are annotated with their probabilities of being new.
 
+```{r, fig.align='center', fig.width=8, fig.height=4, message=FALSE}
+all_plots <- plot_dataset(dataset, treatments, output = 'output')
+print(all_plots[[3]])
+```
+
+```{r}
+sessionInfo()
+```
 
 
 
