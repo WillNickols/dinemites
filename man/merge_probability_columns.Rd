@@ -26,5 +26,7 @@ otherwise.
 \description{
 Take two columns of probabilities in the dataset and merge them by taking
 the average if they are close or manually selecting when the probabilities
-are discordant.
+are discordant. Probabilities can be selected manually by typing "f" (first
+probability), "s" (second probability), or a numeric value between 0 and 1.
+This function should only be run in an interactive session or it will
 }

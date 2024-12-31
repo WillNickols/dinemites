@@ -1,1 +1,1 @@
-
+PKG_CFLAGS=-DCMDSTAN='""' -DCMDSTAN_INSTALL='"implicit"'

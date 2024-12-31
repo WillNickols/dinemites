@@ -55,9 +55,10 @@ Red dashes indicate a time point only known to be infection positive (i.e.,
 no sequencing). Blue dashes indicate
 treatment at that day. Imputed alleles are opaque according to their
 probability of being present. If \code{probability_new} is a column, black dots
-indicate infections that are new with >80\%
-probability, open dots indicate infections that are new with <20\%
-probability, and all other dots are annotated with their probabilities
+indicate infections that are new with >50\%
+probability, open dots indicate infections that are new with <50\%
+probability. If the dots are not annotated, the probabilities are >80\% or
+<20\% respectively, and all other dots are annotated with their probabilities
 of being new.
 }
 \examples{
