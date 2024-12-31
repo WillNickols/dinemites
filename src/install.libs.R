@@ -1,7 +1,3 @@
-if (instantiate:::stan_on_windows()) {
-    stop("stan_on_windows")
-}
-
 libs <- file.path(R_PACKAGE_DIR, "libs", R_ARCH)
 dir.create(libs, recursive = TRUE, showWarnings = FALSE)
 for (file in c("symbols.rds", Sys.glob(paste0("*", SHLIB_EXT)))) {
@@ -38,3 +34,6 @@ callr::r(
   show = TRUE,
   stderr = "2>&1"
 )
+if (instantiate:::stan_on_windows()) {
+    stop(instantiate::stan_package_model_files(path = bin_stan))
+}
