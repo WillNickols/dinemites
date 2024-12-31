@@ -95,12 +95,24 @@ install.packages("cmdstanr",
 cmdstanr::install_cmdstan()
 ```
 
-Then, the latest version of DINEMITES can be installed from GitHub.
+Then, the latest version of DINEMITES can be installed from GitHub. To
+install without vignettes, run the first chunk. To install with vignettes,
+run the second:
 ```
 if (!require("devtools", quietly = TRUE))
     install.packages("devtools")
 
 devtools::install_github("WillNickols/dinemites")
+```
+
+To display the vignette, additionally run the following:
+```
+if (!require("devtools", quietly = TRUE))
+    install.packages("devtools")
+
+devtools::install_github("WillNickols/dinemites", build_vignettes = TRUE,
+    force = TRUE, dependencies = TRUE)
+browseVignettes('dinemites')
 ```
 
 ## Distinguishing new infections
