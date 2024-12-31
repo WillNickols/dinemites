@@ -33,7 +33,7 @@ https://github.com/WillNickols/dinemites/issues.
     * [4.3 New infections](#new-infections)
     * [4.4 Data visualization](#data-visualization)
 
-## 1. Installing R {#installing-r}
+## Installing R
 
 [R](https://www.r-project.org/) is a programming language specializing
 in statistical computing and graphics. You can use R just the same as
@@ -45,15 +45,14 @@ analyses.
 You can download and install the free R software environment
 [here](https://cloud.r-project.org/). Note that you should download the
 latest release - this will ensure the R version you have is compatible
-with MaAsLin 3.
+with DINEMITES.
 
 #### The RStudio IDE
 
 [RStudio](https://rstudio.com/products/rstudio/) is a freely available
 IDE (integrated development environment) for R. It is a "wrapper" around
 R with some additional functionalities that make programming in R a bit
-easier. Feel free to download RStudio and explore its interface - but it
-is not required for this tutorial.
+easier.
 
 #### Important: the correct R version
 
@@ -85,7 +84,7 @@ Either way, once you have the correct version installed, launch the
 software and use `sessionInfo()` to make sure that you indeed have R >=
 3.4.
 
-## 2. Installing DINEMITES {#installing-dinemites}
+## Installing DINEMITES
 
 **Before installing DINEMITES**, `cmdstanr` must be installed. To do so, run 
 the following commands:
@@ -104,9 +103,9 @@ if (!require("devtools", quietly = TRUE))
 devtools::install_github("WillNickols/dinemites")
 ```
 
-## 3. Distinguishing new infections {#distinguishing-new-infections}
+## Distinguishing new infections
 
-### 3.1 DINEMITES input
+### DINEMITES input
 
 #### Sequencing input
 
@@ -192,8 +191,9 @@ indicates that the person received treatment on day 140.
 ```
 plot_single_subject(3, dataset, treatments)
 ```
+![](inst/extdata/pngs/no_imputation.png)
 
-### 3.2 Imputing qPCR only time points {#imputing-qpcr-only-time-points}
+### Imputing qPCR only time points
 
 When some time points are only known to be qPCR positive, multiple
 imputation is used to create multiple datasets with the
@@ -218,6 +218,7 @@ imputed_datasets <- read.csv(system.file(package = "dinemites",
 dataset$probability_present <- rowMeans(imputed_datasets)
 plot_single_subject(3, dataset, treatments)
 ```
+![](inst/extdata/pngs/with_imputation.png)
 
 In the plot, we see that the ambiguous infection on day 109 has been imputed
 to consist of specific alleles (the opacity `alpha` is equal to the
@@ -226,34 +227,34 @@ The alleles that occur both before and after day 109 are
 imputed to be present most confidently while those not seen after day 93 are
 less confidently imputed.
 
-### 3.3 Setting up covariates {#setting-up-covariates}
+### Setting up covariates
 
 DINEMITES includes three models for distinguishing old from persistent
 infections: a Bayesian model, a clustering model, and a simple model. The simple
 model and clustering model do not use information beyond allele presence
 and absence patterns, but the
 Bayesian model relies on modeling the rate at which infections occur newly
-and after previous infections. To this end, a variety of covariates can
-be included that affect the probability an infection will be observed at a
-given time for a given subject. The following code adds columns, for each 
-imputed dataset:
+and after previous infections. To this end, we can include a variety of 
+covariates that affect the probability an infection will be observed at a
+given time for a given subject. The following functions add columns of
+covariates for each imputed dataset:
 
 1. `add_present_infection`: Adds an indicator of whether there is an infection
 from any allele.
 2. `add_persistent_column`: Adds an indicator of whether there has been an
-infection with each row's allele before that time. This corresponds to the
+infection with each row's allele before that row's time. This corresponds to the
 intuition that the probability of observing an allele at any point in the
 future might be higher than at baseline because the parasite might still be
-present, even if not typically detectable.
+present, even after a long gap.
 3. `add_persistent_infection`: Adds an indicator of whether there has been an
 infection from any allele before that row's time.
 4. `add_lag_column`: Adds an indicator of whether there has been an infection
 with each row's allele in the last `30` (default) days. This corresponds to the
-intuition that the probability of observing an allele again shortly after 
-observing the allele is higher than at baseline because the parasite is likely
-still present. 
+intuition that the probability of observing an allele shortly after previously
+observing the allele is higher than the probability of observing it at baseline 
+because the parasite is likely still present. 
 5. `add_lag_infection`: Adds an indicator of whether there has been an infection
-with any row's allele in the last `30` (default) days.
+with any allele in the last `30` (default) days.
 6. `add_treatment_column`: Adds indicators of whether there was treatment
 for the row's allele between 1 and 10 days ago (default) for the 
 `treatment_acute` column and 10 or more days ago (default) for the
@@ -268,7 +269,7 @@ for any allele between 1 and 10 days ago (default) for the
 `treatment_acute_infection` column and 10 or more days ago (default) for the
 `treatment_longitudinal_infection` column. This also sets the 
 `persistent_infection` and `lag_infection_30`
-columns generated in (2) and (4) to 0 after treatment.
+columns generated in (3) and (5) to 0 after treatment.
 
 For each of these functions, the `column` version is specific to the allele 
 (i.e., was this allele observed recently?) while the `infection` version
@@ -280,9 +281,9 @@ over which there might be different probabilities of observing a persistent
 allele (e.g., 30, 60, and 90 days).
 
 ```
-library(doParallel)
-library(foreach)
-library(doRNG)
+suppressPackageStartupMessages(library(doParallel))
+suppressPackageStartupMessages(library(foreach))
+suppressPackageStartupMessages(library(doRNG))
 
 # Can replace with more cores if available
 n_cores <- ifelse(detectCores() > 1, 2, 1)
@@ -312,15 +313,16 @@ datasets <- foreach(i = 1:n_imputations,
 stopCluster(cl)
 ```
 
-### 3.4 Running models {#running-models}
+### Running models {#running-models}
 
 New infections can be identified with three models that assign a
 probability (including 0 or 1) to each observed allele of being from a new
 infection. Except for the Bayesian model in the non-default drop-out mode
-(more later), these are probabilities the observed allele is from a new
+(explained later), these models give the probability each observed allele is 
+from a new
 infection relative to its last observation (if any). That is, if a single 
-infection spans two visits and an allele is only picked up on the second
-visit, this is classified as new rather than persistent (though
+infection spans two visits but an allele is only observed on the second
+visit, this allele will be classified as new rather than persistent (though
 alleles that were sequenced on both days would likely be classified as
 persistent).
 
@@ -328,7 +330,7 @@ persistent).
 
 The first model for distinguishing new from persistent infections is a
 simple rule that counts an allele as new if it has not been observed in
-the `n_lags` most recent samples (e.g., visits) or in the `t_lag` most recent
+the `n_lags` most recent samples (e.g., visits) and the `t_lag` most recent
 times (e.g., days). If the allele has been observed in both the last
 `n_lags` samples and the last `t_lag` times, it is considered new.
 
@@ -354,16 +356,17 @@ stopCluster(cl)
 
 The second model for distinguishing new from persistent infections is a
 Bayesian model that models the rate at which new infections are acquired and
-the rate at which any infections (both new and persistent) and uses laws
-of conditional probability to find the probability an allele is new. The
-model is parameterized with general covariates that affect the rate at which
-new infections are acquired (the season, LLIN usage, etc.) and persistence
-covariates that affect how likely a persistent infection is to be observed
+the rate at which any infections (both new and persistent) 
+are acquired and uses laws
+of conditional probability to find the probability each allele is new. The
+model is parameterized with **general covariates** that affect the rate at which
+new infections are acquired (the season, LLIN usage, etc.) and **persistence
+covariates** that affect how likely a persistent infection is to be observed
 again (whether the allele has ever been observed, has been observed in the
 last 30 days, etc.). A model is fit in Stan, and the posterior coefficient
-draws are used to estimate the probability each allele is new. The model
+draws are used to estimate the probability each allele is new. **The model
 will run with covariates taking on any values, but the model fits much faster
-when the covariates take only one of a few values (e.g., 0/1 indicators)
+when the covariates take only one of a few values** (e.g., 0/1 indicators)
 by collapsing redundant observations in the likelihood function.
 
 This model uses the covariates created in [section 3.3](#setting-up-covariates)
@@ -414,9 +417,8 @@ stopCluster(cl)
 The third model for distinguishing new from persistent infections is a 
 clustering model that, for each subject, clusters alleles according to
 co-occurrence, finds optimal probabilities each allele is present in each 
-cluster and each cluster is present at each time point, uses these to calculate
-the probability an allele is new.
-
+cluster and each cluster is present at each time point, and uses these to 
+calculate the probability an allele is new.
 ```
 n_cores <- ifelse(detectCores() > 1, 2, 1)
 cl <- makeCluster(n_cores)
@@ -434,9 +436,9 @@ probabilities_clustering_mat <-
 stopCluster(cl)
 ```
 
-## 4. Analyzing results {#analyzing-results}
+## Analyzing results {#analyzing-results}
 
-### 4.1 Merging probabilities {#merging-probabilities}
+### Merging probabilities {#merging-probabilities}
 
 First, we will add the probabilities to the dataset:
 ```
@@ -448,7 +450,7 @@ dataset <- dataset %>%
 ```
 
 We want one consensus probability rather than two columns of probabilities,
-so we will use the `merge_probability_columns` to combine the results from
+so we will use `merge_probability_columns` to combine the results from
 the Bayesian model and the clustering model. This function takes the average
 of the probabilities within the threshold (`0.3` by default) and allows
 us to select probabilities manually if they are sufficiently discordant.
@@ -469,10 +471,11 @@ dataset <- merge_probability_columns(dataset,
     threshold = 0.3)
 ```
 
-### 4.2 New complexity of infection {#new-complexity-of-infection}
+### New complexity of infection {#new-complexity-of-infection}
 
-When only one locus is sequenced, the new complexity of infection (COI) is 
-simply 
+The complexity of infection (COI) is the number of genetically unique
+parasite variants detected.
+When only one locus is sequenced, the COI is simply 
 estimated by the sum of: for each allele, the probability the allele is new 
 multiplied by the probability the allele is present (1 if sequenced and 
 present, 0 if not present, between 0 and 1 if imputed).
@@ -505,7 +508,7 @@ compute_total_new_COI(dataset, method = 'sum_then_max') %>%
     kableExtra::kable_styling("striped", full_width = F, position = 'center')
 ```
 
-### 4.3 New infections {#new-infections}
+### New infections {#new-infections}
 
 Additionally, the number of new infections can be estimated based on the
 sequencing data. The number of new infections is estimated by counting
@@ -524,9 +527,9 @@ estimate_new_infections(dataset) %>%
 ```
 
 Typically, the estimated new infections and/or the total new COI are the
-key covariates of interest from a study using this type of data.
+key outcomes of interest from a study using this type of data.
 
-### 4.4 Data visualization {#data-visualization}
+### Data visualization {#data-visualization}
 
 The results can be visualized for an individual subject with 
 `plot_single_subject` or for all subjects with `plot_dataset`. The function
@@ -543,9 +546,7 @@ all_plots <- plot_dataset(dataset, treatments, output = 'output')
 print(all_plots[[3]])
 ```
 
-```
-sessionInfo()
-```
+![](inst/extdata/pngs/subject_3.png)
 
 
 

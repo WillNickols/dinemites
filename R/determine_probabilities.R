@@ -613,12 +613,12 @@ determine_probabilities_clustering <- function(dataset,
         for (i in 1:nrow(lc$nodeclusters)) {
             a <- lc$nodeclusters[i, 1]
             b <- lc$nodeclusters[i, 2]
-            alleles_in_clusters[as.character(a), b] <- 1
+            alleles_in_clusters[as.character(a), as.character(b)] <- 1
         }
 
         alleles_in_clusters <-
             alleles_in_clusters[match(levels(df_for_fit$allele),
-                                      rownames(alleles_in_clusters)),,drop=F]
+                                      rownames(alleles_in_clusters)), , drop=F]
 
         # Prepare data for Stan
         stan_data <- list(

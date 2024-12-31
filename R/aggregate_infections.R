@@ -68,21 +68,22 @@ merge_probability_columns <- function(dataset, cols_to_merge, threshold = 0.3) {
         read_val <- dplyr::case_when(
             read_val == 'f' ~ dataset[index,cols_to_merge[1]],
             read_val == 's' ~ dataset[index,cols_to_merge[2]],
-            TRUE ~ tryCatch(as.numeric(read_val), warning = function(w) {NA}))
+            TRUE ~ tryCatch(as.numeric(read_val),
+                            warning = function(w) {NA_real_}))
         prob_merged[index] <- read_val
         counter <- 1
         while ((prob_merged[index] > 1 |
                prob_merged[index] < 0 |
                is.na(prob_merged[index])) &
                counter <= 3) {
-            prob_merged[index] <-
+            read_val <-
                 readline(prompt =
                     "Choose again: first (f), second (s), other (value 0-1): ")
             read_val <- dplyr::case_when(
                 read_val == 'f' ~ dataset[index,cols_to_merge[1]],
                 read_val == 's' ~ dataset[index,cols_to_merge[2]],
                 TRUE ~ tryCatch(as.numeric(read_val),
-                                warning = function(w) {NA}))
+                                warning = function(w) {NA_real_}))
             prob_merged[index] <- read_val
             counter <- counter + 1
         }

@@ -55,22 +55,21 @@ analyses.
 You can download and install the free R software environment
 [here](https://cloud.r-project.org/). Note that you should download the
 latest release - this will ensure the R version you have is compatible
-with MaAsLin 3.
+with DINEMITES.
 
 #### The RStudio IDE
 
 [RStudio](https://rstudio.com/products/rstudio/) is a freely available
 IDE (integrated development environment) for R. It is a "wrapper" around
 R with some additional functionalities that make programming in R a bit
-easier. Feel free to download RStudio and explore its interface - but it
-is not required for this tutorial.
+easier.
 
 #### Important: the correct R version
 
 If you already have R installed, then it is possible that the R version
 you have does not support DINEMITES The easiest way to check this is to
 launch R/RStudio, and in the console ("Console" pane in RStudio), type
-in the following command (without the `>` symbol):
+in the following command:
 
 ```{R, eval=FALSE, cache = FALSE}
 sessionInfo()
@@ -293,27 +292,27 @@ infections: a Bayesian model, a clustering model, and a simple model. The simple
 model and clustering model do not use information beyond allele presence
 and absence patterns, but the
 Bayesian model relies on modeling the rate at which infections occur newly
-and after previous infections. To this end, a variety of covariates can
-be included that affect the probability an infection will be observed at a
-given time for a given subject. The following code adds columns, for each 
-imputed dataset:
+and after previous infections. To this end, we can include a variety of 
+covariates that affect the probability an infection will be observed at a
+given time for a given subject. The following functions add columns of
+covariates for each imputed dataset:
 
 1. `add_present_infection`: Adds an indicator of whether there is an infection
 from any allele.
 2. `add_persistent_column`: Adds an indicator of whether there has been an
-infection with each row's allele before that time. This corresponds to the
+infection with each row's allele before that row's time. This corresponds to the
 intuition that the probability of observing an allele at any point in the
 future might be higher than at baseline because the parasite might still be
-present, even if not typically detectable.
+present, even after a long gap.
 3. `add_persistent_infection`: Adds an indicator of whether there has been an
 infection from any allele before that row's time.
 4. `add_lag_column`: Adds an indicator of whether there has been an infection
 with each row's allele in the last `30` (default) days. This corresponds to the
-intuition that the probability of observing an allele again shortly after 
-observing the allele is higher than at baseline because the parasite is likely
-still present. 
+intuition that the probability of observing an allele shortly after previously
+observing the allele is higher than the probability of observing it at baseline 
+because the parasite is likely still present. 
 5. `add_lag_infection`: Adds an indicator of whether there has been an infection
-with any row's allele in the last `30` (default) days.
+with any allele in the last `30` (default) days.
 6. `add_treatment_column`: Adds indicators of whether there was treatment
 for the row's allele between 1 and 10 days ago (default) for the 
 `treatment_acute` column and 10 or more days ago (default) for the
@@ -328,7 +327,7 @@ for any allele between 1 and 10 days ago (default) for the
 `treatment_acute_infection` column and 10 or more days ago (default) for the
 `treatment_longitudinal_infection` column. This also sets the 
 `persistent_infection` and `lag_infection_30`
-columns generated in (2) and (4) to 0 after treatment.
+columns generated in (3) and (5) to 0 after treatment.
 
 For each of these functions, the `column` version is specific to the allele 
 (i.e., was this allele observed recently?) while the `infection` version
@@ -340,9 +339,9 @@ over which there might be different probabilities of observing a persistent
 allele (e.g., 30, 60, and 90 days).
 
 ```{r}
-library(doParallel)
-library(foreach)
-library(doRNG)
+suppressPackageStartupMessages(library(doParallel))
+suppressPackageStartupMessages(library(foreach))
+suppressPackageStartupMessages(library(doRNG))
 
 # Can replace with more cores if available
 n_cores <- ifelse(detectCores() > 1, 2, 1)
@@ -377,10 +376,11 @@ stopCluster(cl)
 New infections can be identified with three models that assign a
 probability (including 0 or 1) to each observed allele of being from a new
 infection. Except for the Bayesian model in the non-default drop-out mode
-(more later), these are probabilities the observed allele is from a new
+(explained later), these models give the probability each observed allele is 
+from a new
 infection relative to its last observation (if any). That is, if a single 
-infection spans two visits and an allele is only picked up on the second
-visit, this is classified as new rather than persistent (though
+infection spans two visits but an allele is only observed on the second
+visit, this allele will be classified as new rather than persistent (though
 alleles that were sequenced on both days would likely be classified as
 persistent).
 
@@ -388,7 +388,7 @@ persistent).
 
 The first model for distinguishing new from persistent infections is a
 simple rule that counts an allele as new if it has not been observed in
-the `n_lags` most recent samples (e.g., visits) or in the `t_lag` most recent
+the `n_lags` most recent samples (e.g., visits) and the `t_lag` most recent
 times (e.g., days). If the allele has been observed in both the last
 `n_lags` samples and the last `t_lag` times, it is considered new.
 
@@ -414,16 +414,17 @@ stopCluster(cl)
 
 The second model for distinguishing new from persistent infections is a
 Bayesian model that models the rate at which new infections are acquired and
-the rate at which any infections (both new and persistent) and uses laws
-of conditional probability to find the probability an allele is new. The
-model is parameterized with general covariates that affect the rate at which
-new infections are acquired (the season, LLIN usage, etc.) and persistence
-covariates that affect how likely a persistent infection is to be observed
+the rate at which any infections (both new and persistent) 
+are acquired and uses laws
+of conditional probability to find the probability each allele is new. The
+model is parameterized with **general covariates** that affect the rate at which
+new infections are acquired (the season, LLIN usage, etc.) and **persistence
+covariates** that affect how likely a persistent infection is to be observed
 again (whether the allele has ever been observed, has been observed in the
 last 30 days, etc.). A model is fit in Stan, and the posterior coefficient
-draws are used to estimate the probability each allele is new. The model
+draws are used to estimate the probability each allele is new. **The model
 will run with covariates taking on any values, but the model fits much faster
-when the covariates take only one of a few values (e.g., 0/1 indicators)
+when the covariates take only one of a few values** (e.g., 0/1 indicators)
 by collapsing redundant observations in the likelihood function.
 
 This model uses the covariates created in [section 3.3](#setting-up-covariates)
@@ -431,11 +432,11 @@ and should take a few minutes to run. The fit probabilities can also be
 read in from 
 `system.file(package = "dinemites", "extdata", "probabilities_bayesian_mat.tsv")`.
 
-Note: The Bayesian model can be run with `drop_out = TRUE` to allow alleles
+*Note: The Bayesian model can be run with `drop_out = TRUE` to allow alleles
 to be classified as persistent even if they have never been observed before
 due to sequencing drop-out. This is primarily intended for cases in which the
 estimated sequencing drop-out is above 50%, which can be estimated with
-`estimate_drop_out`.
+`estimate_drop_out`.*
 
 ```{r}
 estimate_drop_out(dataset)
@@ -482,8 +483,8 @@ if (instantiate::stan_cmdstan_exists()) {
 The third model for distinguishing new from persistent infections is a 
 clustering model that, for each subject, clusters alleles according to
 co-occurrence, finds optimal probabilities each allele is present in each 
-cluster and each cluster is present at each time point, uses these to calculate
-the probability an allele is new.
+cluster and each cluster is present at each time point, and uses these to 
+calculate the probability an allele is new.
 
 ```{r}
 if (instantiate::stan_cmdstan_exists()) {
@@ -524,7 +525,7 @@ dataset <- dataset %>%
 ```
 
 We want one consensus probability rather than two columns of probabilities,
-so we will use the `merge_probability_columns` to combine the results from
+so we will use `merge_probability_columns` to combine the results from
 the Bayesian model and the clustering model. This function takes the average
 of the probabilities within the threshold (`0.3` by default) and allows
 us to select probabilities manually if they are sufficiently discordant.
@@ -547,7 +548,9 @@ dataset <- merge_probability_columns(dataset,
 
 ### 4.2 New complexity of infection {#new-complexity-of-infection}
 
-When only one locus is sequenced, the new complexity of infection (COI) is 
+The complexity of infection (COI) is the number of genetically unique
+parasite variants detected.
+When only one locus is sequenced, the COI is 
 simply 
 estimated by the sum of: for each allele, the probability the allele is new 
 multiplied by the probability the allele is present (1 if sequenced and 
@@ -600,7 +603,7 @@ estimate_new_infections(dataset) %>%
 ```
 
 Typically, the estimated new infections and/or the total new COI are the
-key covariates of interest from a study using this type of data.
+key outcomes of interest from a study using this type of data.
 
 ### 4.4 Data visualization {#data-visualization}
 
