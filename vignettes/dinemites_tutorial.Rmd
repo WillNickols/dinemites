@@ -262,9 +262,19 @@ patterns learned from parts of the dataset with complete sequencing data.
 ```{r, fig.align='center', fig.width=7, fig.height=4}
 set.seed(1)
 n_imputations <- 10
-imputed_datasets <- impute_dataset(dataset, 
+
+if (instantiate::stan_cmdstan_exists()) {
+    imputed_datasets <- impute_dataset(dataset, 
                                    n_imputations = n_imputations, 
                                    verbose = FALSE)
+} else {
+    imputed_datasets <- read.csv(system.file(package = "dinemites",
+            "extdata",
+            "imputed_datasets.tsv"), 
+        header = FALSE, 
+        sep="\t")
+}
+
 dataset$probability_present <- rowMeans(imputed_datasets)
 plot_single_subject(3, dataset, treatments)
 ```
