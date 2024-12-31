@@ -135,11 +135,11 @@ merge_probability_columns <- function(dataset, cols_to_merge, threshold = 0.3) {
 #' @import dplyr
 #'
 compute_total_new_COI <- function(dataset, method = 'sum_then_max') {
-    if (any(!c("allele", "locus", "subject",
+    if (any(!c("allele", "subject",
                "time", "present", "probability_new") %in%
             colnames(dataset))) {
         stop(paste0("dataset must contain the columns:",
-             " allele, locus, subject, time, present, probability_new"))
+             " allele, subject, time, present, probability_new"))
     }
 
     check_alleles_unique_across_loci(dataset)
@@ -159,7 +159,14 @@ compute_total_new_COI <- function(dataset, method = 'sum_then_max') {
         stop("probability_new is NA at a row in which probability_present > 0")
     }
 
-    if (method == 'sum_then_max') {
+    if (!'locus' %in% colnames(dataset)) {
+        new_COI_out <- dataset %>%
+            dplyr::group_by(.data$subject) %>%
+            dplyr::summarise(
+                new_COI = sum(.data$probability_present *
+                                    .data$probability_new, na.rm=T),
+                .groups = "drop")
+    } else if (method == 'sum_then_max') {
         new_COI_out <- dataset %>%
             dplyr::group_by(.data$subject, .data$locus, .data$time) %>%
             dplyr::summarise(

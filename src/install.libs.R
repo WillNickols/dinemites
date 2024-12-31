@@ -1,3 +1,7 @@
+if (instantiate:::stan_on_windows()) {
+    stop("stan_on_windows")
+}
+
 libs <- file.path(R_PACKAGE_DIR, "libs", R_ARCH)
 dir.create(libs, recursive = TRUE, showWarnings = FALSE)
 for (file in c("symbols.rds", Sys.glob(paste0("*", SHLIB_EXT)))) {
@@ -24,6 +28,13 @@ if (!file.exists(bin)) {
 }
 bin_stan <- file.path(bin, "stan")
 fs::dir_copy(path = "stan", new_path = bin_stan)
-instantiate::stan_package_compile(
-    models = instantiate::stan_package_model_files(path = bin_stan),
+callr::r(
+  func = function(bin_stan) {
+    instantiate::stan_package_compile(
+      models = instantiate::stan_package_model_files(path = bin_stan),
+    )
+  },
+  args = list(bin_stan = bin_stan),
+  show = TRUE,
+  stderr = "2>&1"
 )

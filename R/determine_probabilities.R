@@ -657,7 +657,7 @@ determine_probabilities_clustering <- function(dataset,
         # alleles x clusters x times
         p_a_in_c_at_t_given_a_present <- array(NA, dim = c(J, C, n_times))
 
-        for (time_point in 1:n_times) {
+        for (time_point in seq(n_times)) {
             for (allele_index in 1:J) {
                 denom <- 1 - prod(1 - prob_allele_in_cluster[allele_index,] *
                                       prob_cluster_in_time[time_point,])
@@ -670,7 +670,7 @@ determine_probabilities_clustering <- function(dataset,
         p_a_in_c_at_t_given_a_present <- pmin(p_a_in_c_at_t_given_a_present, 1)
 
         prob_new_vec <- rep(0, N)
-        for (j in 1:N) {
+        for (j in seq(N)) {
             time_point <- times[j]
             allele_index <- alleles[j]
 

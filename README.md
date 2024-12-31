@@ -313,7 +313,7 @@ datasets <- foreach(i = 1:n_imputations,
 stopCluster(cl)
 ```
 
-### Running models {#running-models}
+### Running models
 
 New infections can be identified with three models that assign a
 probability (including 0 or 1) to each observed allele of being from a new
@@ -436,9 +436,9 @@ probabilities_clustering_mat <-
 stopCluster(cl)
 ```
 
-## Analyzing results {#analyzing-results}
+## Analyzing results
 
-### Merging probabilities {#merging-probabilities}
+### Merging probabilities
 
 First, we will add the probabilities to the dataset:
 ```
@@ -471,7 +471,7 @@ dataset <- merge_probability_columns(dataset,
     threshold = 0.3)
 ```
 
-### New complexity of infection {#new-complexity-of-infection}
+### New complexity of infection
 
 The complexity of infection (COI) is the number of genetically unique
 parasite variants detected.
@@ -508,7 +508,7 @@ compute_total_new_COI(dataset, method = 'sum_then_max') %>%
     kableExtra::kable_styling("striped", full_width = F, position = 'center')
 ```
 
-### New infections {#new-infections}
+### New infections
 
 Additionally, the number of new infections can be estimated based on the
 sequencing data. The number of new infections is estimated by counting
@@ -529,7 +529,7 @@ estimate_new_infections(dataset) %>%
 Typically, the estimated new infections and/or the total new COI are the
 key outcomes of interest from a study using this type of data.
 
-### Data visualization {#data-visualization}
+### Data visualization
 
 The results can be visualized for an individual subject with 
 `plot_single_subject` or for all subjects with `plot_dataset`. The function

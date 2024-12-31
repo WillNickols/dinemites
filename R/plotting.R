@@ -104,7 +104,8 @@ plot_single_subject <- function(subject,
         }
 
         if ("probability_new" %in% colnames(tmp_df) &&
-            all(!is.na(tmp_df$probability_new))) {
+            all(!is.na(tmp_df$probability_new[tmp_df$probability_present > 0])))
+        {
             estimated_new_infections <- estimate_new_infections(tmp_df)
         }
 
@@ -159,7 +160,8 @@ plot_single_subject <- function(subject,
             ungroup()
 
         if ("probability_new" %in% colnames(tmp_df) &&
-            all(!is.na(tmp_df$probability_new))) {
+            all(!is.na(tmp_df$probability_new[tmp_df$probability_present > 0])))
+        {
             tmp_df_new_COI <- tmp_df %>%
                 dplyr::filter(!is.na(.data$probability_new)) %>%
                 dplyr::group_by(.data$time) %>%
@@ -313,7 +315,8 @@ plot_single_subject <- function(subject,
         }
 
         if ("probability_new" %in% colnames(tmp_df) &&
-            all(!is.na(tmp_df$probability_new))) {
+            all(!is.na(tmp_df$probability_new[tmp_df$probability_present > 0])))
+        {
             plot_out <- patchwork::wrap_plots(
                 p1,
                 p2,
