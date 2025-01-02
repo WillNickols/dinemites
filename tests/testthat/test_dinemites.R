@@ -103,7 +103,7 @@ compute_total_new_COI(dataset, method = 'max_then_sum')
 estimated_new_infections <-
     estimate_new_infections(dataset,
                             imputation_mat = imputed_datasets,
-                            probability_mat = probabilities_bayesian_mat)
+                            probability_mat = probabilities_simple_mat)
 
 plot_dataset(dataset, treatments, estimated_new_infections)
 
