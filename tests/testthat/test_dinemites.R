@@ -23,7 +23,8 @@ estimate_drop_out(dataset)
 
 n_imputations <- 2
 imputed_datasets <- impute_dataset(dataset, n_imputations = n_imputations)
-dataset$probability_present <- rowMeans(imputed_datasets)
+dataset <- add_probability_present(dataset, imputed_datasets)
+expect_that(rowMeans(imputed_datasets), equals(dataset$probability_present))
 
 plot_dataset(dataset, treatments)
 
@@ -92,15 +93,19 @@ if (instantiate::stan_cmdstan_exists()) {
 
 stopCluster(cl)
 
-probabilities_simple_mat_check <-
-    read.table(system.file(package="dinemites", "extdata", "probabilities_simple_mat.tsv"),
-               sep = '\t') %>% as.matrix()
+dataset <- add_probability_new(dataset, probabilities_simple_mat)
+expect_that(rowMeans(probabilities_simple_mat, na.rm = T),
+            equals(dataset$probability_new))
 
-expect_that(probabilities_simple_mat[,1],equals(probabilities_simple_mat_check[,1]))
+compute_total_new_COI(dataset, method = 'sum_then_max')
+compute_total_new_COI(dataset, method = 'max_then_sum')
 
-dataset$probability_new <- rowMeans(probabilities_simple_mat, na.rm = T)
+estimated_new_infections <-
+    estimate_new_infections(dataset,
+                            imputation_mat = imputed_datasets,
+                            probability_mat = probabilities_bayesian_mat)
 
-plot_dataset(dataset, treatments)
+plot_dataset(dataset, treatments, estimated_new_infections)
 
 
 

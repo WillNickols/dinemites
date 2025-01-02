@@ -4,15 +4,26 @@
 \alias{estimate_new_infections}
 \title{estimate_new_infections}
 \usage{
-estimate_new_infections(dataset)
+estimate_new_infections(dataset, imputation_mat = NULL, probability_mat = NULL)
 }
 \arguments{
 \item{dataset}{A complete longitudinal dataset with columns \code{allele},
-\code{subject}, \code{time}, \code{present}, \code{probability_new}, and
-\code{probability_present} if using imputed data.}
+\code{subject}, \code{time}, \code{present} (0/1), and \code{probability_new}.}
+
+\item{imputation_mat}{If using imputations, the output of the function
+\code{impute_dataset}: a
+matrix with an equal number of rows to \code{dataset} and one column per
+imputed dataset.}
+
+\item{probability_mat}{If using imputations, a matrix with the same
+dimensions as \code{imputation_mat}
+with one column per imputed dataset containing the probability the allele
+was new if present.}
 }
 \value{
-A data.frame with a \code{subject} column and a \code{new_infections} column.
+A data frame with row names corresponding to the subjects and
+one column per imputed dataset (or a single column if not using
+imputations).
 }
 \description{
 Compute the total new infection events for each subject by identifying

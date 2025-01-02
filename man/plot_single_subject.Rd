@@ -8,6 +8,7 @@ plot_single_subject(
   subject,
   dataset,
   treatments = NULL,
+  estimated_new_infections = NULL,
   no_imputation = FALSE,
   output = NULL,
   height = 6,
@@ -26,6 +27,9 @@ prevalence, \code{prevalence} should be a column.}
 
 \item{treatments}{A data.frame of treatments with columns \code{subject} and
 \code{time}.}
+
+\item{estimated_new_infections}{The result of \code{estimate_new_infections}
+run on the dataset.}
 
 \item{no_imputation}{Disregard qPCR-only times by setting times with
 \code{present == 2} to \code{present = 0}.}
@@ -49,15 +53,20 @@ with annotations
 for the probability the allele is new if \code{probability_new} is a column. Each
 allele is its own row and color, and points are connected if the same allele
 occurs repeatedly.
+If \code{probability_present} is a column, imputed alleles are shown with an
+opacity alpha equal to how often they were imputed.
 If \code{probability_new} is a column, the pan-locus new
 complexity of infection at each time is shown in a strip above the plot.
+If an \code{estimated_new_infections} matrix or data frame is provided,
+the plot title will include the estimated number of new infections.
 Red dashes indicate a time point only known to be infection positive (i.e.,
-no sequencing). Blue dashes indicate
-treatment at that day. Imputed alleles are opaque according to their
-probability of being present. If \code{probability_new} is a column, black dots
-indicate infections that are new with >50\%
-probability, open dots indicate infections that are new with <50\%
-probability. If the dots are not annotated, the probabilities are >80\% or
+no sequencing).
+Blue dashes indicate treatment at that day if the \code{treatment} data frame
+is provided.
+If \code{probability_new} is a column, black dots indicate infections that are
+new with >50\% probability, open dots indicate infections that are new with
+<50\% probability.
+If the dots are not annotated, the probabilities are >80\% or
 <20\% respectively, and all other dots are annotated with their probabilities
 of being new.
 }
@@ -74,6 +83,8 @@ dataset <- fill_in_dataset(dataset_in)
 dataset$probability_new <-
     determine_probabilities_simple(dataset)$probability_new
 
-plot_single_subject('A', dataset, treatments)
+estimated_new_infections <- estimate_new_infections(dataset)
+
+plot_single_subject('A', dataset, treatments, estimated_new_infections)
 
 }

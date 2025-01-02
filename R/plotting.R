@@ -6,15 +6,20 @@
 #' for the probability the allele is new if `probability_new` is a column. Each
 #' allele is its own row and color, and points are connected if the same allele
 #' occurs repeatedly.
+#' If `probability_present` is a column, imputed alleles are shown with an
+#' opacity alpha equal to how often they were imputed.
 #' If `probability_new` is a column, the pan-locus new
 #' complexity of infection at each time is shown in a strip above the plot.
+#' If an `estimated_new_infections` matrix or data frame is provided,
+#' the plot title will include the estimated number of new infections.
 #' Red dashes indicate a time point only known to be infection positive (i.e.,
-#' no sequencing). Blue dashes indicate
-#' treatment at that day. Imputed alleles are opaque according to their
-#' probability of being present. If `probability_new` is a column, black dots
-#' indicate infections that are new with >50%
-#' probability, open dots indicate infections that are new with <50%
-#' probability. If the dots are not annotated, the probabilities are >80% or
+#' no sequencing).
+#' Blue dashes indicate treatment at that day if the `treatment` data frame
+#' is provided.
+#' If `probability_new` is a column, black dots indicate infections that are
+#' new with >50% probability, open dots indicate infections that are new with
+#' <50% probability.
+#' If the dots are not annotated, the probabilities are >80% or
 #' <20% respectively, and all other dots are annotated with their probabilities
 #' of being new.
 #'
@@ -27,6 +32,8 @@
 #' prevalence, `prevalence` should be a column.
 #' @param treatments A data.frame of treatments with columns `subject` and
 #' `time`.
+#' @param estimated_new_infections The result of `estimate_new_infections`
+#' run on the dataset.
 #' @param no_imputation Disregard qPCR-only times by setting times with
 #' `present == 2` to `present = 0`.
 #' @param output File to which the plot should be saved
@@ -49,7 +56,9 @@
 #' dataset$probability_new <-
 #'     determine_probabilities_simple(dataset)$probability_new
 #'
-#' plot_single_subject('A', dataset, treatments)
+#' estimated_new_infections <- estimate_new_infections(dataset)
+#'
+#' plot_single_subject('A', dataset, treatments, estimated_new_infections)
 #'
 #' @import dplyr
 #' @import ggplot2
@@ -57,6 +66,7 @@
 plot_single_subject <- function(subject,
                                 dataset,
                                 treatments = NULL,
+                                estimated_new_infections = NULL,
                                 no_imputation = FALSE,
                                 output = NULL,
                                 height = 6,
@@ -106,7 +116,11 @@ plot_single_subject <- function(subject,
         if ("probability_new" %in% colnames(tmp_df) &&
             all(!is.na(tmp_df$probability_new[tmp_df$probability_present > 0])))
         {
-            estimated_new_infections <- estimate_new_infections(tmp_df)
+            new_infections <- ifelse(
+                is.null(estimated_new_infections),
+                NA,
+                rowMeans(estimated_new_infections)[
+                rownames(estimated_new_infections) == subject_current])
         }
 
         # Filled if new
@@ -193,13 +207,17 @@ plot_single_subject <- function(subject,
                 scale_x_continuous(breaks = time_points,
                                    limits = c(min(time_points),
                                               max(time_points) * 1.1)) +
+                scale_y_continuous(limits = c(0, NA)) +
                 theme_bw() +
                 labs(x = "Day",
                      y = "Pan-locus\nNew COI",
                      title = paste0("Subject: ",
                         subject,
-                        "\nEstimated new infection events: ",
-                        round(estimated_new_infections$new_infections, 1))) +
+                        ifelse(is.na(new_infections),
+                               "",
+                               paste0("\nEstimated new infection events: ",
+                                      round(new_infections, 1)))
+                        )) +
                 theme(legend.position = 'none',
                       panel.grid.major = element_blank(),
                       panel.grid.minor = element_blank(),
@@ -350,6 +368,8 @@ plot_single_subject <- function(subject,
 #' are new, `probability_new` should be a column.
 #' @param treatments A data.frame of treatments with columns `subject` and
 #' `time`.
+#' @param estimated_new_infections The result of `estimate_new_infections`
+#' run on the dataset.
 #' @param no_imputation Disregard qPCR-only times by setting times with
 #' `present == 2` to `present = 0`.
 #' @param output Folder to which the plots should be saved
@@ -381,6 +401,7 @@ plot_single_subject <- function(subject,
 #'
 plot_dataset <- function(dataset,
                          treatments = NULL,
+                         estimated_new_infections = NULL,
                          no_imputation = FALSE,
                          output = NULL,
                          height = 6,
@@ -428,13 +449,15 @@ plot_dataset <- function(dataset,
         }
 
         plot_list[[subject]] <-
-            plot_single_subject(subject,
-                                dataset,
-                                treatments = treatments,
-                                no_imputation = no_imputation,
-                                output = output_file,
-                                height = height,
-                                width = width)
+            plot_single_subject(
+                subject,
+                dataset,
+                treatments = treatments,
+                estimated_new_infections = estimated_new_infections,
+                no_imputation = no_imputation,
+                output = output_file,
+                height = height,
+                width = width)
     }
     return(plot_list)
 }

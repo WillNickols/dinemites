@@ -199,12 +199,7 @@ compute_total_new_COI <- function(dataset, method = 'sum_then_max') {
 }
 
 # Count new infections using the algorithm described in the manuscript
-count_new_infections <- function(total_new,
-                                 max_new,
-                                 max_new_weighted,
-                                 min_new,
-                                 min_new_weighted,
-                                 max_prob) {
+count_new_infections <- function(total_new, max_new, min_new) {
     if (length(total_new) == 0) {
         return(0)
     }
@@ -238,24 +233,8 @@ count_new_infections <- function(total_new,
 
     count <- 0
     for (peak_trough_region in peak_trough_regions) {
-        first_certain_index <- min(which(max_prob[peak_trough_region] == 1),
-                                   length(peak_trough_region) + 1)
-        if (first_certain_index <=
-            length(peak_trough_region) & first_certain_index > 1) {
-            max_new_used <-
-                c(max_new_weighted[peak_trough_region][
-                    1:(first_certain_index - 1)],
-                  max_new[peak_trough_region][
-                      first_certain_index:length(peak_trough_region)])
-            min_new_used <-
-                c(min_new_weighted[peak_trough_region][
-                    1:(first_certain_index - 1)],
-                  min_new[peak_trough_region][
-                      first_certain_index:length(peak_trough_region)])
-        } else {
-            max_new_used <- max_new[peak_trough_region]
-            min_new_used <- min_new[peak_trough_region]
-        }
+        max_new_used <- max_new[peak_trough_region]
+        min_new_used <- min_new[peak_trough_region]
 
         if (length(min_new_used) != length(peak_trough_region)) {
             stop(paste0(length(min_new_used), " ", length(peak_trough_region)))
@@ -279,9 +258,18 @@ count_new_infections <- function(total_new,
 #'
 #' @export
 #' @param dataset A complete longitudinal dataset with columns `allele`,
-#' `subject`, `time`, `present`, `probability_new`, and
-#' `probability_present` if using imputed data.
-#' @return A data.frame with a `subject` column and a `new_infections` column.
+#' `subject`, `time`, `present` (0/1), and `probability_new`.
+#' @param imputation_mat If using imputations, the output of the function
+#' `impute_dataset`: a
+#' matrix with an equal number of rows to `dataset` and one column per
+#' imputed dataset.
+#' @param probability_mat If using imputations, a matrix with the same
+#' dimensions as `imputation_mat`
+#' with one column per imputed dataset containing the probability the allele
+#' was new if present.
+#' @return A data frame with row names corresponding to the subjects and
+#' one column per imputed dataset (or a single column if not using
+#' imputations).
 #' @examples
 #'
 #' library(dplyr)
@@ -301,83 +289,132 @@ count_new_infections <- function(total_new,
 #'
 #' @import dplyr
 #'
-estimate_new_infections <- function(dataset) {
-    if (any(!c("allele", "subject", "time", "present", "probability_new") %in%
+estimate_new_infections <- function(dataset,
+                                    imputation_mat = NULL,
+                                    probability_mat = NULL) {
+    if (any(!c("allele", "subject", "time", "present") %in%
             colnames(dataset))) {
         stop(paste0("dataset must contain the columns:",
              " allele, subject, time, present, probability_new"))
     }
 
-    if (!'probability_present' %in% colnames(dataset)) {
-        message(paste0("probability_present not in colnames(dataset),",
-                       " using present == 1"))
-        dataset$probability_present <- ifelse(dataset$present == 1, 1, 0)
-    }
-
     check_alleles_unique_across_loci(dataset)
     check_alleles_same_across_subject_times(dataset)
 
-    if (any(is.na(dataset$probability_new) & dataset$probability_present > 0)) {
-        stop("probability_new is NA at a row in which probability_present > 0")
+    if (any(dataset$present == 2) &
+        (is.null(imputation_mat) | is.null(probability_mat))) {
+        stop(paste0("imputation_mat and probability_mat must be supplied when",
+                    " dataset$present has any 2s"))
     }
 
-    new_infections <- dataset %>%
-        dplyr::group_by(.data$subject, .data$time) %>%
-        dplyr::summarise(
-            total_new = sum((.data$probability_present * .data$probability_new)[
-                .data$probability_present > 0]),
-             max_new = ifelse(
-                 max(.data$probability_present) > 0.1,
-                 max(.data$probability_new[.data$probability_present > 0.1], 0),
-                 max(.data$probability_new[.data$probability_present > 0], 0)),
-             max_new_weighted =
-                ifelse(max(.data$probability_present) > 0.1,
-                   max(.data$probability_new[.data$probability_present > 0.1] *
-                           .data$probability_present[
-                               .data$probability_present > 0.1], 0),
-                   max(.data$probability_new[
-                       .data$probability_present > 0], 0)),
-             min_new =
-                ifelse(max(.data$probability_present) > 0.1,
-                    max(min(.data$probability_new[
-                        .data$probability_present > 0.1], 2), 0),
-                    max(min(.data$probability_new[
-                        .data$probability_present > 0], 2), 0)),
-             min_new_weighted =
-                ifelse(max(.data$probability_present) > 0.1,
-                       max(min(.data$probability_new[
-                           .data$probability_present > 0.1] *
-                               .data$probability_present[
-                                   .data$probability_present > 0.1], 2), 0),
-                       max(min(.data$probability_new[
-                           .data$probability_present > 0], 2), 0)),
-             max_prob = max(.data$probability_present),
-            .groups = "drop") %>%
-        dplyr::mutate(min_new = ifelse(.data$min_new == 2, 0, .data$min_new)) %>%
-        dplyr::mutate(
-            min_new_weighted = ifelse(.data$min_new_weighted == 2,
-                                      0, .data$min_new_weighted)) %>%
-        dplyr::mutate(
-            max_new = ifelse(is.na(.data$max_new), 0, .data$max_new),
-            max_new_weighted = ifelse(is.na(.data$max_new_weighted),
-                                      0, .data$max_new_weighted),
-            min_new = ifelse(is.na(.data$min_new), 0, .data$min_new),
-            min_new_weighted =
-                ifelse(is.na(.data$min_new_weighted),
-                       0, .data$min_new_weighted),
-            max_prob = ifelse(is.na(.data$max_prob), 0, .data$max_prob)) %>%
-        dplyr::ungroup() %>%
-        dplyr::group_by(.data$subject) %>%
-        dplyr::arrange(.data$time) %>%
-        dplyr::summarise(
-            new_infections = count_new_infections(
-                .data$total_new[!is.na(.data$total_new)],
-                .data$max_new[!is.na(.data$total_new)],
-                .data$max_new_weighted[!is.na(.data$total_new)],
-                .data$min_new[!is.na(.data$total_new)],
-                .data$min_new_weighted[!is.na(.data$total_new)],
-                .data$max_prob[!is.na(.data$total_new)]),
-            .groups = "drop")
+    if (!any(dataset$present == 2) &
+        (is.null(imputation_mat) | is.null(probability_mat))) {
+        # No imputations used
+        if (!'probability_new' %in% colnames(dataset)) {
+            stop(paste0("probability_new must be a column in dataset if not",
+            " using imputed values"))
+        }
+
+        if (any(is.na(dataset$probability_new) & dataset$present == 1)) {
+            stop("probability_new is NA at a row in which present == 1")
+        }
+
+        new_infections <- dataset %>%
+            dplyr::group_by(.data$subject, .data$time) %>%
+            dplyr::summarise(
+                total_new = sum(.data$probability_new[.data$present == 1]),
+                max_new = max(.data$probability_new[.data$present == 1], 0),
+                min_new = max(min(
+                    .data$probability_new[.data$present == 1], 2), 0),
+                .groups = "drop") %>%
+            dplyr::mutate(
+                min_new = ifelse(.data$min_new == 2, 0, .data$min_new)) %>%
+            dplyr::mutate(
+                max_new = ifelse(is.na(.data$max_new), 0, .data$max_new),
+                min_new = ifelse(is.na(.data$min_new), 0, .data$min_new)) %>%
+            dplyr::ungroup() %>%
+            dplyr::group_by(.data$subject) %>%
+            dplyr::arrange(.data$time) %>%
+            dplyr::summarise(
+                new_infections = count_new_infections(
+                    .data$total_new[!is.na(.data$total_new)],
+                    .data$max_new[!is.na(.data$total_new)],
+                    .data$min_new[!is.na(.data$total_new)]),
+                .groups = "drop") %>%
+            as.data.frame()
+
+        rownames(new_infections) <- new_infections$subject
+        new_infections$subject <- NULL
+    } else {
+        # Imputations used
+        if (any(dim(imputation_mat) != dim(probability_mat))) {
+            stop(paste0("imputation_mat and probability_mat must ",
+            "have the same dimensions"))
+        }
+
+        if (nrow(imputation_mat) != nrow(dataset)) {
+            stop(paste0("imputation_mat and dataset must have the same",
+                        " number of rows"))
+        }
+
+        if (any(c('present_tmp', 'probability_new_tmp') %in% colnames(dataset))) {
+            stop(paste0("present_tmp and probability_new_tmp should not be",
+            " columns in dataset if using multiple imputaiton"))
+        }
+
+        n_imputations <- ncol(imputation_mat)
+
+        new_infections_mat <- matrix(ncol = n_imputations,
+                                     nrow = length(unique(dataset$subject)))
+        for (i in seq(n_imputations)) {
+            dataset$present_tmp <- imputation_mat[,i]
+            dataset$probability_new_tmp <- probability_mat[,i]
+            if (any(dataset$present == 1 & dataset$present_tmp == 0) |
+                any(dataset$present == 0 & dataset$present_tmp == 1)) {
+                stop(paste0("Incompatible present column of dataset and",
+                " imputation matrix column. Check that dataset has rows",
+                " in the same order as when the imputations were created"))
+            }
+
+            if (any(is.na(dataset$probability_new_tmp) & dataset$present_tmp == 1)) {
+                stop("probability_mat is NA at a position in which imputation_mat == 1")
+            }
+
+            new_infections <- dataset %>%
+                dplyr::group_by(.data$subject, .data$time) %>%
+                dplyr::summarise(
+                    total_new = sum(.data$probability_new_tmp[.data$present_tmp == 1]),
+                    max_new = max(.data$probability_new_tmp[.data$present_tmp == 1], 0),
+                    min_new = max(min(
+                        .data$probability_new_tmp[.data$present_tmp == 1], 2), 0),
+                    .groups = "drop") %>%
+                dplyr::mutate(
+                    min_new = ifelse(.data$min_new == 2, 0, .data$min_new)) %>%
+                dplyr::mutate(
+                    max_new = ifelse(is.na(.data$max_new), 0, .data$max_new),
+                    min_new = ifelse(is.na(.data$min_new), 0, .data$min_new)) %>%
+                dplyr::ungroup() %>%
+                dplyr::group_by(.data$subject) %>%
+                dplyr::arrange(.data$time) %>%
+                dplyr::summarise(
+                    new_infections = count_new_infections(
+                        .data$total_new[!is.na(.data$total_new)],
+                        .data$max_new[!is.na(.data$total_new)],
+                        .data$min_new[!is.na(.data$total_new)]),
+                    .groups = "drop")
+
+            new_infections_mat[,i] <- new_infections$new_infections
+            rownames(new_infections_mat) <- new_infections$subject
+        }
+        new_infections <- data.frame(new_infections_mat)
+    }
+
+    if (ncol(new_infections) == 1) {
+        colnames(new_infections) <- 'new_infections'
+    } else {
+        colnames(new_infections) <-
+            paste0('imputation_', seq(ncol(new_infections)))
+    }
 
     return(new_infections)
 }

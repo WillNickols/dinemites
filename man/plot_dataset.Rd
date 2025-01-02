@@ -7,6 +7,7 @@
 plot_dataset(
   dataset,
   treatments = NULL,
+  estimated_new_infections = NULL,
   no_imputation = FALSE,
   output = NULL,
   height = 6,
@@ -21,6 +22,9 @@ are new, \code{probability_new} should be a column.}
 
 \item{treatments}{A data.frame of treatments with columns \code{subject} and
 \code{time}.}
+
+\item{estimated_new_infections}{The result of \code{estimate_new_infections}
+run on the dataset.}
 
 \item{no_imputation}{Disregard qPCR-only times by setting times with
 \code{present == 2} to \code{present = 0}.}

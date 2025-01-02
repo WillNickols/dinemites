@@ -801,14 +801,15 @@ estimate_drop_out <- function(dataset, gap_size = 3) {
                       .data$max_time - .data$min_time <= gap_size) %>%
         dplyr::summarise(
             proportion_present_in_range = mean(.data$present == 1),
-            n = n()
+            n = n(), .groups = 'drop'
         ) %>%
         dplyr::ungroup() %>%
         dplyr::group_by(.data$subject) %>%
         dplyr::summarise(proportion_present_in_range =
                       sum(.data$proportion_present_in_range * .data$n) /
                           sum(.data$n),
-                      n = sum(.data$n))
+                      n = sum(.data$n),
+                      .groups = 'drop')
 
     return_vec <- c("Drop out rate" =
                         1 - sum(gap_df$proportion_present_in_range * gap_df$n) /

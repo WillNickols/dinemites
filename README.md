@@ -105,7 +105,6 @@ if (!require("devtools", quietly = TRUE))
 devtools::install_github("WillNickols/dinemites")
 ```
 
-To display the vignette, additionally run the following:
 ```
 if (!require("devtools", quietly = TRUE))
     install.packages("devtools")
@@ -216,18 +215,18 @@ replaced by values imputed from the rest of the data.
 In this multiple imputation, alleles are inferred based on which alleles 
 were present at the other, sequenced time points for the subject, using 
 patterns learned from parts of the dataset with complete sequencing data.
+The function `add_probability_present` then adds a column to `dataset` with
+the probability each allele was present based on the imputations.
 
 ```
 set.seed(1)
 n_imputations <- 10
 
-imputed_datasets <- read.csv(system.file(package = "dinemites",
-        "extdata",
-        "imputed_datasets.tsv"), 
-    header = FALSE, 
-    sep="\t")
+imputed_datasets <- impute_dataset(dataset, 
+                                   n_imputations = n_imputations, 
+                                   verbose = FALSE)
 
-dataset$probability_present <- rowMeans(imputed_datasets)
+dataset <- add_probability_present(dataset, imputed_datasets)
 plot_single_subject(3, dataset, treatments)
 ```
 ![](inst/extdata/pngs/with_imputation.png)
@@ -452,13 +451,18 @@ stopCluster(cl)
 
 ### Merging probabilities
 
-First, we will add the probabilities to the dataset:
+First, we will add the probabilities to the dataset with the function
+`add_probability_new`, which checks that the matrices of probabilities
+to add are valid and then adds on the (average) probability of the allele being
+new (given that it is present, if using imputations):
 ```
-dataset <- dataset %>%
-    dplyr::mutate(probability_clustering = 
-                      rowMeans(probabilities_clustering_mat, na.rm = T),
-                  probability_bayesian = 
-                      rowMeans(probabilities_bayesian_mat, na.rm = T))
+dataset <- add_probability_new(dataset, 
+                               probabilities_clustering_mat, 
+                               'probability_clustering')
+
+dataset <- add_probability_new(dataset, 
+                               probabilities_bayesian_mat, 
+                               'probability_bayesian')
 ```
 
 We want one consensus probability rather than two columns of probabilities,
@@ -474,10 +478,6 @@ try this, copy the chunk with `merge_probability_columns` into the console
 and run it.
 
 ```
-dataset <- dataset %>% dplyr::mutate(probability_new = probability_bayesian)
-```
-
-```
 dataset <- merge_probability_columns(dataset, 
     c('probability_clustering', 'probability_bayesian'), 
     threshold = 0.3)
@@ -487,7 +487,11 @@ dataset <- merge_probability_columns(dataset,
 
 The complexity of infection (COI) is the number of genetically unique
 parasite variants detected.
-When only one locus is sequenced, the COI is simply 
+Typically, the estimated new infections and/or the total new COI are the
+key outcomes of interest from a study using this type of data.
+
+When only one locus is sequenced, the COI is 
+simply 
 estimated by the sum of: for each allele, the probability the allele is new 
 multiplied by the probability the allele is present (1 if sequenced and 
 present, 0 if not present, between 0 and 1 if imputed).
@@ -520,6 +524,11 @@ compute_total_new_COI(dataset, method = 'sum_then_max') %>%
     kableExtra::kable_styling("striped", full_width = F, position = 'center')
 ```
 
+*Note: The total new COI is computed from the probability each allele is
+present and new, averaged over the imputed datasets if necessary. Therefore,
+manually merging probabilities (e.g., [Merging probabilities](#merging-probabilities))
+after running `add_probability_new` will affect the total new COI.*
+
 ### New infections
 
 Additionally, the number of new infections can be estimated based on the
@@ -529,17 +538,27 @@ maximum and minimum novelty throughout the peaks. Sometimes, the estimated
 new infections might appear unexpectedly high, but this is typically because
 there are many time points with moderate-low probabilities of new infections
 that add up. We estimate the number of new infections with 
-`estimate_new_infections`.
+`estimate_new_infections`. When using imputations, this function requires
+the matrix of imputed values and the matrix of determined probabilities since
+it estimates the new infections from each imputed dataset.
 
 ```
-estimate_new_infections(dataset) %>%
+estimated_new_infections <- estimate_new_infections(dataset, 
+                        imputation_mat = imputed_datasets, 
+                        probability_mat = probabilities_bayesian_mat) 
+
+data.frame(subject = rownames(estimated_new_infections),
+           new_infections = rowMeans(estimated_new_infections)) %>%
     knitr::kable() %>%
     kableExtra::scroll_box(height = "200px", extra_css = "border: none;") %>%
     kableExtra::kable_styling("striped", full_width = F, position = 'center')
 ```
 
-Typically, the estimated new infections and/or the total new COI are the
-key outcomes of interest from a study using this type of data.
+*Note: The total new infections are computed from each imputed dataset
+separately. Therefore, if probabilities are to be merged manually
+(e.g., [Merging probabilities](#merging-probabilities)), this must be
+done for every imputed dataset separately, the results must be stored in one
+matrix, and `estimated_new_infections` can then be run.*
 
 ### Data visualization
 

@@ -13,6 +13,8 @@
 #' could have generated such a pattern. By default, `k` will be the minimum of 9
 #' and the average number of time points per subject.
 #' @param n_cores Number of cores to use when imputing datasets
+#' @param retries Number of times to retry imputation when no allele is imputed
+#' for a positive time point before choosing a random allele.
 #' @param verbose Whether to print updates during imputation
 #' @return An `nrow(dataset)` by `n_imputations` matrix of 0s and 1s
 #' corresponding to the imputed values, one column per imputed dataset
@@ -27,7 +29,6 @@
 #' dataset <- fill_in_dataset(dataset_in)
 #' dataset <- add_qpcr_times(dataset, qpcr_times)
 #' imputed_mat <- impute_dataset(dataset)
-#' dataset$present_probability <- rowMeans(imputed_mat)
 #'
 #' @import dplyr
 #' @import doParallel
@@ -38,11 +39,16 @@ impute_dataset <- function(dataset,
                            n_imputations = 10,
                            k = NULL,
                            n_cores = 1,
+                           retries = 100,
                            verbose = TRUE) {
     if (any(!c("allele", "subject", "time", "present") %in%
             colnames(dataset))) {
         stop("dataset must contain the columns:
              allele, subject, time, present")
+    }
+
+    if (!inherits(dataset, 'data.frame')) {
+        stop('dataset must be of type data.frame')
     }
 
     check_alleles_unique_across_loci(dataset)
@@ -251,65 +257,101 @@ impute_dataset <- function(dataset,
                     fill = 0))
 
             present_allele_mat$allele <- NULL
-            present_allele_mat_new <- present_allele_mat
+            finished <- FALSE
+            finished_counter <- 0
+            while (!finished & finished_counter < retries) {
+                present_allele_mat_new <- present_allele_mat
 
-            # Loop through each row in present_allele_mat
-            for (row_num in 1:nrow(present_allele_mat)) {
-                current_row <- unname(unlist(present_allele_mat[row_num,]))
+                # Loop through each row in present_allele_mat
+                for (row_num in 1:nrow(present_allele_mat)) {
+                    current_row <- unname(unlist(present_allele_mat[row_num,]))
 
-                position_of_interest <- 1
-                length_row <- length(current_row)
+                    position_of_interest <- 1
+                    length_row <- length(current_row)
 
-                # While not completely imputed
-                while (any(current_row == 2)) {
-                    if (current_row[position_of_interest] == 2) {
-                        current_k <- k
-                        while(current_k > 0) {
-                            # Adjust sliding window around position of interest
-                            half_window <- floor(current_k / 2)
-                            left_bound <-
-                                max(1, position_of_interest - half_window)
-                            right_bound <-
-                                min(length_row,
-                                    position_of_interest + half_window)
-                            sliding_window <- left_bound:right_bound
+                    # While not completely imputed
+                    singleton_allele <- all(current_row %in% c(0,2))
+                    while (any(current_row == 2)) {
+                        if (current_row[position_of_interest] == 2) {
+                            # Allele must not be a singleton or there
+                            # must be no neighbors to anything in the row
+                            # to impute
+                            no_neighbors <- (position_of_interest == 1 ||
+                                all(present_allele_mat[position_of_interest - 1] == 0)) &&
+                                (position_of_interest == length_row ||
+                                     all(present_allele_mat[position_of_interest + 1] == 0))
+                            if (!singleton_allele | no_neighbors) {
+                                current_k <- k
+                                while(current_k > 0) {
+                                    # Adjust sliding window around position of interest
+                                    half_window <- floor(current_k / 2)
+                                    left_bound <-
+                                        max(1, position_of_interest - half_window)
+                                    right_bound <-
+                                        min(length_row,
+                                            position_of_interest + half_window)
+                                    sliding_window <- left_bound:right_bound
 
-                            search_string <-
-                                paste0(current_row[sliding_window],
-                                       collapse = '')
+                                    search_string <-
+                                        paste0(current_row[sliding_window],
+                                               collapse = '')
 
-                            if(search_string %in% rownames(
-                                comparison_table_list[[
-                                    length(sliding_window)]])) {
-                                replacement <-
-                                    sample(colnames(comparison_table_list[[
-                                        length(sliding_window)]][
-                                            search_string,, drop=F]),
-                                        1,
-                                        prob = comparison_table_list[[
-                                            length(sliding_window)]][
-                                                search_string,] /
-                                            sum(comparison_table_list[[
+                                    if(search_string %in% rownames(
+                                        comparison_table_list[[
+                                            length(sliding_window)]])) {
+                                        replacement <-
+                                            sample(colnames(comparison_table_list[[
                                                 length(sliding_window)]][
-                                                    search_string,]))
-                                current_row[sliding_window] <-
-                                    as.numeric(unlist(
-                                        strsplit(replacement, '')))
-                                break
-                            } else { # Search string not found at current k
-                                current_k <- current_k - 1
+                                                    search_string,, drop=F]),
+                                                1,
+                                                prob = comparison_table_list[[
+                                                    length(sliding_window)]][
+                                                        search_string,] /
+                                                    sum(comparison_table_list[[
+                                                        length(sliding_window)]][
+                                                            search_string,]))
+                                        current_row[sliding_window] <-
+                                            as.numeric(unlist(
+                                                strsplit(replacement, '')))
+                                        break
+                                    } else { # Search string not found at current k
+                                        current_k <- current_k - 1
+                                    }
+                                }
+                                if (current_k == 0) {
+                                    stop(paste0("current_k == 0, something went",
+                                                " wrong in the imputation procedure"))
+                                }
+                            } else {
+                                current_row[position_of_interest] <- 0
                             }
                         }
-                        if (current_k == 0) {
-                            stop(paste0("current_k == 0, something went",
-                                " wrong in the imputation procedure"))
-                        }
+                        position_of_interest <- position_of_interest + 1
+                        if (position_of_interest > length_row) break
                     }
-                    position_of_interest <- position_of_interest + 1
-                    if (position_of_interest > length_row) break
+
+                    present_allele_mat_new[row_num, ] <- current_row
                 }
 
-                present_allele_mat_new[row_num, ] <- current_row
+                cols_with_2s <- which(present_allele_mat[1,] == 2)
+                if (all(colSums(present_allele_mat_new == 1)[cols_with_2s] > 0)) {
+                    finished <- TRUE
+                } else {
+                    finished_counter <- finished_counter + 1
+                }
+            }
+
+            if (finished_counter >= retries) {
+                warning(paste0('Subject ', subject_cur, ' could not be imputed',
+                               ' at all positive time points. Setting a random',
+                               ' allele to present.'))
+                for (col_with_2s in cols_with_2s) {
+                    if (all(present_allele_mat_new[,col_with_2s] == 0)) {
+                        present_allele_mat_new[
+                            sample(seq(nrow(present_allele_mat_new)), 1),
+                            col_with_2s] <- 1
+                    }
+                }
             }
 
             # Add imputed values to growing list
@@ -333,3 +375,66 @@ impute_dataset <- function(dataset,
 
     return(imputation_mat)
 }
+
+#' add_probability_present
+#'
+#' Add a column with the probability an allele was present based on the
+#' imputations.
+#'
+#' @export
+#' @param dataset A complete longitudinal dataset with columns `allele`,
+#' `subject`, `time`, and `present`
+#' @param imputation_mat The output of the function `impute_dataset`
+#' @return The dataset with a new column `probability_present`
+#' giving the proportion of imputations in which the allele was present.
+#'
+#' @examples
+#' dataset_in <- data.frame(allele = c('A', 'A', 'A', NA, NA, 'B', NA, 'B'),
+#'     subject = rep('A', 8),
+#'     time = c(1, 2, 3, 4, 5, 6, 7, 8))
+#'
+#' qpcr_times <- data.frame(subject = rep('A', 1), time = c(7))
+#'
+#' dataset <- fill_in_dataset(dataset_in)
+#' dataset <- add_qpcr_times(dataset, qpcr_times)
+#' imputed_mat <- impute_dataset(dataset)
+#' dataset <- add_probability_present(dataset, imputed_mat)
+#'
+#' @import dplyr
+add_probability_present <- function(dataset, imputation_mat) {
+    if (any(!c("allele", "subject", "time", "present") %in%
+            colnames(dataset))) {
+        stop("dataset must contain the columns:
+             allele, subject, time, present")
+    }
+
+    if ('probability_present' %in% colnames(dataset)) {
+        stop("probability_present should not be a column of the input dataset")
+    }
+
+    check_alleles_unique_across_loci(dataset)
+    check_alleles_same_across_subject_times(dataset)
+
+    if (nrow(dataset) != nrow(imputation_mat)) {
+        stop(paste0("number of rows in dataset not equal to ",
+                    "number of rows in imputation_mat"))
+    }
+    if (any(!(dataset$present == imputation_mat)[dataset$present == 1,])) {
+        stop(paste0("imputation_mat is 0 at a position at which ",
+                    "dataset$present == 1. Check that the row ",
+                    "order of dataset has not",
+                    " changed since imputation."))
+    }
+    if (any(!(dataset$present == imputation_mat)[dataset$present == 0,])) {
+        stop(paste0("imputation_mat is 1 at a position at which ",
+                    "dataset$present == 1. Check that the row ",
+                    "order of dataset has not",
+                    " changed since imputation."))
+    }
+
+    dataset <- dataset %>%
+        dplyr::mutate(probability_present = rowMeans(imputation_mat))
+
+    return(dataset)
+}
+

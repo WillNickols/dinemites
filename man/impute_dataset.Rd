@@ -9,6 +9,7 @@ impute_dataset(
   n_imputations = 10,
   k = NULL,
   n_cores = 1,
+  retries = 100,
   verbose = TRUE
 )
 }
@@ -25,6 +26,9 @@ could have generated such a pattern. By default, \code{k} will be the minimum of
 and the average number of time points per subject.}
 
 \item{n_cores}{Number of cores to use when imputing datasets}
+
+\item{retries}{Number of times to retry imputation when no allele is imputed
+for a positive time point before choosing a random allele.}
 
 \item{verbose}{Whether to print updates during imputation}
 }
@@ -46,6 +50,5 @@ qpcr_times <- data.frame(subject = rep('A', 1), time = c(7))
 dataset <- fill_in_dataset(dataset_in)
 dataset <- add_qpcr_times(dataset, qpcr_times)
 imputed_mat <- impute_dataset(dataset)
-dataset$present_probability <- rowMeans(imputed_mat)
 
 }

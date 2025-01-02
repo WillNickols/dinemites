@@ -257,6 +257,8 @@ replaced by values imputed from the rest of the data.
 In this multiple imputation, alleles are inferred based on which alleles 
 were present at the other, sequenced time points for the subject, using 
 patterns learned from parts of the dataset with complete sequencing data.
+The function `add_probability_present` then adds a column to `dataset` with
+the probability each allele was present based on the imputations.
 
 ```{r, fig.align='center', fig.width=7, fig.height=4}
 set.seed(1)
@@ -274,7 +276,7 @@ if (instantiate::stan_cmdstan_exists()) {
         sep="\t")
 }
 
-dataset$probability_present <- rowMeans(imputed_datasets)
+dataset <- add_probability_present(dataset, imputed_datasets)
 plot_single_subject(3, dataset, treatments)
 ```
 
@@ -515,13 +517,18 @@ if (instantiate::stan_cmdstan_exists()) {
 
 ### 4.1 Merging probabilities {#merging-probabilities}
 
-First, we will add the probabilities to the dataset:
+First, we will add the probabilities to the dataset with the function
+`add_probability_new`, which checks that the matrices of probabilities
+to add are valid and then adds on the (average) probability of the allele being
+new (given that it is present, if using imputations):
 ```{r}
-dataset <- dataset %>%
-    dplyr::mutate(probability_clustering = 
-                      rowMeans(probabilities_clustering_mat, na.rm = T),
-                  probability_bayesian = 
-                      rowMeans(probabilities_bayesian_mat, na.rm = T))
+dataset <- add_probability_new(dataset, 
+                               probabilities_clustering_mat, 
+                               'probability_clustering')
+
+dataset <- add_probability_new(dataset, 
+                               probabilities_bayesian_mat, 
+                               'probability_bayesian')
 ```
 
 We want one consensus probability rather than two columns of probabilities,
@@ -550,6 +557,9 @@ dataset <- merge_probability_columns(dataset,
 
 The complexity of infection (COI) is the number of genetically unique
 parasite variants detected.
+Typically, the estimated new infections and/or the total new COI are the
+key outcomes of interest from a study using this type of data.
+
 When only one locus is sequenced, the COI is 
 simply 
 estimated by the sum of: for each allele, the probability the allele is new 
@@ -584,6 +594,11 @@ compute_total_new_COI(dataset, method = 'sum_then_max') %>%
     kableExtra::kable_styling("striped", full_width = F, position = 'center')
 ```
 
+*Note: The total new COI is computed from the probability each allele is
+present and new, averaged over the imputed datasets if necessary. Therefore,
+manually merging probabilities (e.g., [section 4.2](#merging-probabilities))
+after running `add_probability_new` will affect the total new COI.*
+
 ### 4.3 New infections {#new-infections}
 
 Additionally, the number of new infections can be estimated based on the
@@ -593,22 +608,34 @@ maximum and minimum novelty throughout the peaks. Sometimes, the estimated
 new infections might appear unexpectedly high, but this is typically because
 there are many time points with moderate-low probabilities of new infections
 that add up. We estimate the number of new infections with 
-`estimate_new_infections`.
+`estimate_new_infections`. When using imputations, this function requires
+the matrix of imputed values and the matrix of determined probabilities since
+it estimates the new infections from each imputed dataset.
 
 ```{r}
-estimate_new_infections(dataset) %>%
+estimated_new_infections <- estimate_new_infections(dataset, 
+                        imputation_mat = imputed_datasets, 
+                        probability_mat = probabilities_bayesian_mat) 
+
+data.frame(subject = rownames(estimated_new_infections),
+           new_infections = rowMeans(estimated_new_infections)) %>%
     knitr::kable() %>%
     kableExtra::scroll_box(height = "200px", extra_css = "border: none;") %>%
     kableExtra::kable_styling("striped", full_width = F, position = 'center')
 ```
 
-Typically, the estimated new infections and/or the total new COI are the
-key outcomes of interest from a study using this type of data.
+*Note: The total new infections are computed from each imputed dataset
+separately. Therefore, if probabilities are to be merged manually
+(e.g., [section 4.2](#merging-probabilities)), this must be
+done for every imputed dataset separately, the results must be stored in one
+matrix, and `estimated_new_infections` can then be run.*
 
 ### 4.4 Data visualization {#data-visualization}
 
 The results can be visualized for an individual subject with 
-`plot_single_subject` or for all subjects with `plot_dataset`. The function
+`plot_single_subject` or for all subjects with `plot_dataset`. Supplying the
+`treatments` and `estimated_new_infections` data frames will display
+these on the plots. The function
 `plot_dataset` also shows the prevalence of each allele (proportion of 
 sequencing-positive samples in which the allele was present) to the right. As
 before, red lines indicate qPCR-only time points, and blue lines indicate 
@@ -618,7 +645,10 @@ are not annotated, the probabilities are >80\% or <20\% respectively, and all
 other dots are annotated with their probabilities of being new.
 
 ```{r, fig.align='center', fig.width=8, fig.height=4, message=FALSE}
-all_plots <- plot_dataset(dataset, treatments, output = 'output')
+all_plots <- plot_dataset(dataset, 
+                          treatments, 
+                          estimated_new_infections,
+                          output = 'output')
 print(all_plots[[3]])
 ```
 
