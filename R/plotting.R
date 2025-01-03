@@ -117,7 +117,8 @@ plot_single_subject <- function(subject,
             all(!is.na(tmp_df$probability_new[tmp_df$probability_present > 0])))
         {
             new_infections <- ifelse(
-                is.null(estimated_new_infections),
+                is.null(estimated_new_infections) |
+                    all(rownames(estimated_new_infections) != subject_current),
                 NA,
                 rowMeans(estimated_new_infections)[
                 rownames(estimated_new_infections) == subject_current])
