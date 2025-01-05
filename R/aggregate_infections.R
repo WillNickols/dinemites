@@ -27,6 +27,10 @@ merge_probability_columns <- function(dataset, cols_to_merge, threshold = 0.3) {
     check_alleles_unique_across_loci(dataset)
     check_alleles_same_across_subject_times(dataset)
 
+    dataset <- dataset %>%
+        dplyr::mutate(original_row_ordering = seq(nrow(dataset))) %>%
+        dplyr::arrange(.data$subject, .data$allele, .data$time)
+
     prob_abs_diffs <-
         abs(dataset[,cols_to_merge[1]] - dataset[,cols_to_merge[2]])
 
@@ -95,6 +99,11 @@ merge_probability_columns <- function(dataset, cols_to_merge, threshold = 0.3) {
     }
 
     dataset$probability_new <- prob_merged
+
+    dataset <- dataset %>%
+        dplyr::arrange(.data$original_row_ordering) %>%
+        dplyr::select(-.data$original_row_ordering)
+
     return(dataset)
 }
 

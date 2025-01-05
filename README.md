@@ -4,7 +4,10 @@
 
 **DINEMITES** (**Di**stinguishing **Ne**w **M**alaria **I**nfections in 
 **T**im**e** **S**eries) is a comprehensive R package for distinguishing
-new from persistent infections in longitudinal sequencing data. It is intended
+new from persistent infections in longitudinal sequencing data. It can 
+determine probabilities individual alleles are new, estimate the new
+complexity of infection per person over the observation period, and infer the
+number of new infections over the observation period. It is intended
 for use with longitudinal malaria studies, but it can be applied to any 
 longitudinal data in which people can acquire a disease with multiple variants
 multiple times.

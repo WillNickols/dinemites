@@ -10,7 +10,7 @@
 #' @param k Maximum window size to consider when evaluating presence/absence
 #' patterns. `k`/2 time points on either side of the value to be imputed
 #' are used to match the qPCR-only time point to complete data time points that
-#' could have generated such a pattern. By default, `k` will be the minimum of 9
+#' could have generated such a pattern. By default, `k` will be the minimum of 8
 #' and the average number of time points per subject.
 #' @param n_cores Number of cores to use when imputing datasets
 #' @param retries Number of times to retry imputation when no allele is imputed
@@ -39,7 +39,7 @@ impute_dataset <- function(dataset,
                            n_imputations = 10,
                            k = NULL,
                            n_cores = 1,
-                           retries = 100,
+                           retries = 200,
                            verbose = TRUE) {
     if (any(!c("allele", "subject", "time", "present") %in%
             colnames(dataset))) {
@@ -68,7 +68,7 @@ impute_dataset <- function(dataset,
     }
 
     if (is.null(k)) {
-        k <- min(9, floor(mean(table(dataset$subject, dataset$allele))))
+        k <- min(8, floor(mean(table(dataset$subject, dataset$allele))))
     }
 
     if (k < 1) {
@@ -228,8 +228,6 @@ impute_dataset <- function(dataset,
             comparison_table_list[[k_sub]] <- matrix(nrow = 0, ncol = 0)
         }
     }
-    # Set k since it might be below originally set k
-    k <- k_sub - 2
 
     dataset <- dataset %>%
         arrange(.data$subject, .data$allele, .data$time)
@@ -262,9 +260,13 @@ impute_dataset <- function(dataset,
             while (!finished & finished_counter < retries) {
                 present_allele_mat_new <- present_allele_mat
 
-                # Loop through each row in present_allele_mat
-                for (row_num in 1:nrow(present_allele_mat)) {
+                # Loop through each row in present_allele_mat, first
+                # rows with present alleles, then the rest
+                rows_with_1s <- which(rowSums(present_allele_mat == 1) > 0)
+                for (row_num in c(rows_with_1s, setdiff(seq(nrow(present_allele_mat)), rows_with_1s))) {
                     current_row <- unname(unlist(present_allele_mat[row_num,]))
+                    cols_new_allowed <- apply(present_allele_mat_new, 1,
+                                              function(row) if (any(row == 1)) which.max(row == 1) else 0)
 
                     position_of_interest <- 1
                     length_row <- length(current_row)
@@ -273,14 +275,16 @@ impute_dataset <- function(dataset,
                     singleton_allele <- all(current_row %in% c(0,2))
                     while (any(current_row == 2)) {
                         if (current_row[position_of_interest] == 2) {
-                            # Allele must not be a singleton or there
-                            # must be no neighbors to anything in the row
-                            # to impute
-                            no_neighbors <- (position_of_interest == 1 ||
-                                all(present_allele_mat[position_of_interest - 1] == 0)) &&
-                                (position_of_interest == length_row ||
-                                     all(present_allele_mat[position_of_interest + 1] == 0))
-                            if (!singleton_allele | no_neighbors) {
+                            # To impute the allele:
+                            # it must not be a singleton OR
+                            # it must be at a day something else was new OR
+                            # it must be k/2 from anything sequenced
+                            left_bound <- max(c(1, position_of_interest - floor(k / 2)))
+                            right_bound <- min(c(length_row, position_of_interest + floor(k / 2)))
+                            no_neighbors <- !any(present_allele_mat_new[,left_bound:right_bound] == 1)
+                            if (!singleton_allele |
+                                position_of_interest %in% cols_new_allowed |
+                                no_neighbors) {
                                 current_k <- k
                                 while(current_k > 0) {
                                     # Adjust sliding window around position of interest
@@ -310,9 +314,10 @@ impute_dataset <- function(dataset,
                                                     sum(comparison_table_list[[
                                                         length(sliding_window)]][
                                                             search_string,]))
-                                        current_row[sliding_window] <-
+                                        current_row[position_of_interest] <-
                                             as.numeric(unlist(
-                                                strsplit(replacement, '')))
+                                                strsplit(replacement, '')))[
+                                                    sliding_window == position_of_interest]
                                         break
                                     } else { # Search string not found at current k
                                         current_k <- current_k - 1
@@ -345,12 +350,27 @@ impute_dataset <- function(dataset,
                 warning(paste0('Subject ', subject_cur, ' could not be imputed',
                                ' at all positive time points. Setting a random',
                                ' allele to present.'))
-                for (col_with_2s in cols_with_2s) {
-                    if (all(present_allele_mat_new[,col_with_2s] == 0)) {
-                        present_allele_mat_new[
-                            sample(seq(nrow(present_allele_mat_new)), 1),
-                            col_with_2s] <- 1
+
+                present_allele_mat_new <- present_allele_mat
+                sets_of_2s <- split(cols_with_2s,
+                                    cumsum(c(TRUE, diff(cols_with_2s) != 1)))
+
+                for (set_of_2s in sets_of_2s) {
+                    cols_with_1s <- which(colSums(present_allele_mat_new == 1) > 0)
+                    if (length(cols_with_1s) > 0) {
+                        closest_col <- cols_with_1s[
+                            which.min(apply(outer(set_of_2s, cols_with_1s, FUN = function(x, y) abs(x - y)), 2, min))]
+                        if (all(abs(set_of_2s - closest_col) > floor(k / 2))) {
+                            position_present <- sample(seq(nrow(present_allele_mat_new)), 1)
+                        } else {
+                            position_present <- which(present_allele_mat_new[,closest_col] == 1)
+                        }
+                    } else {
+                        position_present <- sample(seq(nrow(present_allele_mat_new)), 1)
                     }
+
+                    present_allele_mat_new[,set_of_2s] <- 0
+                    present_allele_mat_new[position_present, set_of_2s] <- 1
                 }
             }
 

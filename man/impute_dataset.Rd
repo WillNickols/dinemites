@@ -9,7 +9,7 @@ impute_dataset(
   n_imputations = 10,
   k = NULL,
   n_cores = 1,
-  retries = 100,
+  retries = 500,
   verbose = TRUE
 )
 }
@@ -22,7 +22,7 @@ impute_dataset(
 \item{k}{Maximum window size to consider when evaluating presence/absence
 patterns. \code{k}/2 time points on either side of the value to be imputed
 are used to match the qPCR-only time point to complete data time points that
-could have generated such a pattern. By default, \code{k} will be the minimum of 9
+could have generated such a pattern. By default, \code{k} will be the minimum of 8
 and the average number of time points per subject.}
 
 \item{n_cores}{Number of cores to use when imputing datasets}

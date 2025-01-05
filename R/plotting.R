@@ -113,9 +113,7 @@ plot_single_subject <- function(subject,
             tmp_df$grayscale <- "gray95"
         }
 
-        if ("probability_new" %in% colnames(tmp_df) &&
-            all(!is.na(tmp_df$probability_new[tmp_df$probability_present > 0])))
-        {
+        if ("probability_new" %in% colnames(tmp_df)) {
             new_infections <- ifelse(
                 is.null(estimated_new_infections) |
                     all(rownames(estimated_new_infections) != subject_current),
@@ -174,16 +172,14 @@ plot_single_subject <- function(subject,
             )) %>%
             ungroup()
 
-        if ("probability_new" %in% colnames(tmp_df) &&
-            all(!is.na(tmp_df$probability_new[tmp_df$probability_present > 0])))
-        {
+        if ("probability_new" %in% colnames(tmp_df)) {
             tmp_df_new_COI <- tmp_df %>%
-                dplyr::filter(!is.na(.data$probability_new)) %>%
                 dplyr::group_by(.data$time) %>%
                 dplyr::summarise(total_new =
                     sum((.data$probability_present * .data$probability_new)[
                         .data$probability_present > 0]),
-                    .groups = "drop")
+                    .groups = "drop") %>%
+                dplyr::filter(!is.na(.data$total_new))
 
             p1 <- ggplot(tmp_df_new_COI,
                          aes(x = .data$time,
@@ -208,7 +204,6 @@ plot_single_subject <- function(subject,
                 scale_x_continuous(breaks = time_points,
                                    limits = c(min(time_points),
                                               max(time_points) * 1.1)) +
-                scale_y_continuous(limits = c(0, NA)) +
                 theme_bw() +
                 labs(x = "Day",
                      y = "Pan-locus\nNew COI",
@@ -233,6 +228,8 @@ plot_single_subject <- function(subject,
 
             if (max(tmp_df_new_COI$total_new, na.rm=T) < 1) {
                 p1 <- p1 + scale_y_continuous(limits = c(0,1), breaks = c(0,1))
+            } else {
+                p1 <- p1 + scale_y_continuous(limits = c(0, NA))
             }
         }
 
@@ -333,9 +330,7 @@ plot_single_subject <- function(subject,
                 labs(x = "Day", y = 'Allele')
         }
 
-        if ("probability_new" %in% colnames(tmp_df) &&
-            all(!is.na(tmp_df$probability_new[tmp_df$probability_present > 0])))
-        {
+        if ("probability_new" %in% colnames(tmp_df)) {
             plot_out <- patchwork::wrap_plots(
                 p1,
                 p2,
