@@ -285,7 +285,9 @@ plot_single_subject(3, dataset, treatments)
 
 In the plot, we see that the ambiguous infection on day 109 has been imputed
 to consist of specific alleles (the opacity `alpha` is equal to the
-proportion of times the allele is imputed to be present).
+proportion of times the allele is imputed to be present). By default, 10
+imputed datasets are created, but this can be increased up to 50 for better
+precision. Imputing more than 50 datasets is typically unnecessary.
 
 ### 3.3 Setting up covariates {#setting-up-covariates}
 
@@ -512,6 +514,35 @@ if (instantiate::stan_cmdstan_exists()) {
         sep="\t")
 }
 ```
+
+#### Runtime
+The following guidelines can help with choosing models that run in reasonable
+amounts of time:
+
+* Imputation: The imputation procedure scales approximately linearly in
+the number of subjects, the number of alleles, and the number of time points
+per subject. It scales approximately exponentially in the parameter `k`, so 
+changing `k` from its default is typically not recommended. Imputing 10 datasets
+for 100 alleles, 200 subjects, and 20 time points per subject should take less
+than 10 minutes, and it is unlikely to be the most computationally intensive
+step.
+* Simple model: The simple model scales linearly with the number of subjects,
+the number of alleles, and the number of time points per subject. It should
+take less than 1 minute (per imputed dataset) for 100 alleles, 200 subjects, 
+and 20 time points per subject, and it is unlikely to be the most 
+computationally intensive step.
+* Bayesian model: The Bayesian model scales linearly with the number of alleles
+and the number of formula variables and up to linearly with the number of
+subjects and the number of time points per subject. It should
+take about an hour (per imputed dataset) for 100 alleles, 200 subjects, 
+20 time points per subject, and 4 formula variables, and it is likely to be the
+most computationally intensive step. Running imputed datasets in parallel is 
+strongly recommended, and filtering out rare alleles can help substantially.
+* Clustering model: The clustering model scales linearly with the number of 
+subjects, the number of alleles, and the number of time points per subject. It 
+should take less than 5 minutes (per imputed dataset) for 100 alleles, 200 
+subjects, and 20 time points per subject, and it is unlikely to be the most 
+computationally intensive step.
 
 ## 4. Analyzing results {#analyzing-results}
 
