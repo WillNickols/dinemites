@@ -9,7 +9,7 @@ impute_dataset(
   n_imputations = 10,
   k = NULL,
   n_cores = 1,
-  retries = 500,
+  retries = 200,
   verbose = TRUE
 )
 }
