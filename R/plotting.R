@@ -282,8 +282,9 @@ plot_single_subject <- function(subject,
         if ('prevalence' %in% colnames(tmp_df)) {
             p2 <- p2 +
                 ggrepel::geom_text_repel(
+                    box.padding = 0,
                     data = tmp_df[tmp_df$prevalence != '',],
-                    aes(x = max(time_points), label = .data$prevalence),
+                    aes(x = max(time_points) * 1.02, label = .data$prevalence),
                     direction = "x",
                     hjust = 1,
                     nudge_x = 1,
@@ -294,6 +295,7 @@ plot_single_subject <- function(subject,
         if ("probability_new" %in% colnames(tmp_df)) {
             p2 <- p2 +
                 ggrepel::geom_text_repel(
+                    box.padding = 0,
                     aes(x = .data$time,
                         y = .data$allele,
                         label = .data$probability_label),
@@ -334,12 +336,28 @@ plot_single_subject <- function(subject,
             plot_out <- patchwork::wrap_plots(
                 p1,
                 p2,
-                nrow = 2,
-                heights = c(1, 5),
+                ggplot(data.frame(l = "Prevalence", x = 1, y = 1)) +
+                    geom_text(aes(x, y, label = l), angle = 270) +
+                    theme_void() +
+                    coord_cartesian(clip = "off"),
+                design = c(patchwork::area(1, 1),
+                           patchwork::area(2, 1),
+                           patchwork::area(2, 2, 2, 2)),
+                heights = c(1, 5), widths = c(19, 1),
                 axes = 'collect_x'
             )
         } else {
-            plot_out <- p2
+            plot_out <- patchwork::wrap_plots(
+                p2,
+                ggplot(data.frame(l = "Prevalence", x = 1, y = 1)) +
+                    geom_text(aes(x, y, label = l), angle = 270) +
+                    theme_void() +
+                    coord_cartesian(clip = "off"),
+                design = c(patchwork::area(1, 1),
+                           patchwork::area(1, 2, 1, 2)),
+                heights = c(1, 5), widths = c(19, 1),
+                axes = 'collect_x'
+            )
         }
 
         if (!is.null(output)) {
