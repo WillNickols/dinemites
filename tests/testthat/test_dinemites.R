@@ -97,8 +97,8 @@ dataset <- add_probability_new(dataset, probabilities_simple_mat)
 expect_that(rowMeans(probabilities_simple_mat, na.rm = T),
             equals(dataset$probability_new))
 
-compute_total_new_COI(dataset, method = 'sum_then_max')
-compute_total_new_COI(dataset, method = 'max_then_sum')
+compute_molFOI(dataset, method = 'sum_then_max')
+compute_molFOI(dataset, method = 'max_then_sum')
 
 estimated_new_infections <-
     estimate_new_infections(dataset,

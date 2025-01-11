@@ -107,9 +107,9 @@ merge_probability_columns <- function(dataset, cols_to_merge, threshold = 0.3) {
     return(dataset)
 }
 
-#' compute_total_new_COI
+#' compute_molFOI
 #'
-#' Compute the total new complexity of infection (COI, number of unique
+#' Compute the total molecular force of infection (molFOI, number of new unique
 #' genetic variants) deduplicated across loci for each subject by
 #' either summing across the loci and taking the maximum or maximizing the
 #' diversity on each day over the loci and then summing the maxima.
@@ -118,11 +118,12 @@ merge_probability_columns <- function(dataset, cols_to_merge, threshold = 0.3) {
 #' @param dataset A complete longitudinal dataset with columns `allele`,
 #' `subject`, `time`, `present`, `locus`, `probability_new`, and
 #' `probability_present` if using imputed data.
-#' @param method Whether to sum the per-locus COI across all time points for
+#' @param method Whether to sum the per-locus molFOI across all time points for
 #' each locus and then take the maximum (`sum_then_max`) or take the maximum
-#' per-locus COI at each time point across the loci and then sum the maxima
+#' per-locus new complexity at each time point across the loci and then sum
+#' the maxima
 #' (`max_then_sum`).
-#' @return A dataframe with a `subject` column and a `new_COI` column.
+#' @return A dataframe with a `subject` column and a `molFOI` column.
 #' @examples
 #'
 #' library(dplyr)
@@ -138,12 +139,12 @@ merge_probability_columns <- function(dataset, cols_to_merge, threshold = 0.3) {
 #' dataset$probability_new <-
 #'     determine_probabilities_simple(dataset)$probability_new
 #'
-#' compute_total_new_COI(dataset, method = 'sum_then_max')
-#' compute_total_new_COI(dataset, method = 'max_then_sum')
+#' compute_molFOI(dataset, method = 'sum_then_max')
+#' compute_molFOI(dataset, method = 'max_then_sum')
 #'
 #' @import dplyr
 #'
-compute_total_new_COI <- function(dataset, method = 'sum_then_max') {
+compute_molFOI <- function(dataset, method = 'sum_then_max') {
     if (any(!c("allele", "subject",
                "time", "present", "probability_new") %in%
             colnames(dataset))) {
@@ -169,14 +170,14 @@ compute_total_new_COI <- function(dataset, method = 'sum_then_max') {
     }
 
     if (!'locus' %in% colnames(dataset)) {
-        new_COI_out <- dataset %>%
+        compute_molFOI_out <- dataset %>%
             dplyr::group_by(.data$subject) %>%
             dplyr::summarise(
-                new_COI = sum(.data$probability_present *
+                molFOI = sum(.data$probability_present *
                                     .data$probability_new, na.rm=T),
                 .groups = "drop")
     } else if (method == 'sum_then_max') {
-        new_COI_out <- dataset %>%
+        compute_molFOI_out <- dataset %>%
             dplyr::group_by(.data$subject, .data$locus, .data$time) %>%
             dplyr::summarise(
                 sum_first = sum(.data$probability_present *
@@ -186,10 +187,10 @@ compute_total_new_COI <- function(dataset, method = 'sum_then_max') {
             dplyr::summarise(sum_second = sum(.data$sum_first, na.rm = T),
                              .groups = "drop") %>%
             dplyr::group_by(.data$subject) %>%
-            dplyr::summarise(new_COI = max(.data$sum_second, 0, na.rm=T),
+            dplyr::summarise(molFOI = max(.data$sum_second, 0, na.rm=T),
                              .groups = "drop")
     } else if (method == 'max_then_sum') {
-        new_COI_out <- dataset %>%
+        compute_molFOI_out <- dataset %>%
             dplyr::group_by(.data$subject, .data$locus, .data$time) %>%
             dplyr::summarise(
                 sum_first = sum(.data$probability_present *
@@ -200,11 +201,11 @@ compute_total_new_COI <- function(dataset, method = 'sum_then_max') {
                 max_second = max(.data$sum_first, 0, na.rm = T),
                 .groups = "drop") %>%
             dplyr::group_by(.data$subject) %>%
-            dplyr::summarise(new_COI = sum(.data$max_second, na.rm=T),
+            dplyr::summarise(molFOI = sum(.data$max_second, na.rm=T),
                              .groups = "drop")
     }
 
-    return(new_COI_out)
+    return(compute_molFOI_out)
 }
 
 # Count new infections using the algorithm described in the manuscript

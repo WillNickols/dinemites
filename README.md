@@ -6,10 +6,10 @@
 **T**im**e** **S**eries) is a comprehensive R package for distinguishing
 new from persistent infections in longitudinal sequencing data. It can 
 determine probabilities individual alleles are new, estimate the new
-complexity of infection per person over the observation period, and infer the
+molecular force of infection per person, and infer the
 number of new infections over the observation period. It is intended
 for use with longitudinal malaria studies, but it can be applied to any 
-longitudinal data in which people can acquire a disease with multiple variants
+longitudinal data in which people can acquire a disease with multiple alleles
 multiple times.
 
 If you use the DINEMITES software, please cite our work:
@@ -32,7 +32,7 @@ https://github.com/WillNickols/dinemites/issues.
     * [3.4 Running models](#running-models)
 * [4. Analyzing results](#analyzing-results)
     * [4.1 Merging probabilities](#merging-probabilities)
-    * [4.2 New complexity of infection](#new-complexity-of-infection)
+    * [4.2 Molecular force of infection](#molecular-force-of-infection)
     * [4.3 New infections](#new-infections)
     * [4.4 Data visualization](#data-visualization)
 
@@ -129,10 +129,10 @@ name of the genetic variant sequenced in the sample (e.g., `A206G`,
 `pfama1.21`, `11`). The `time` column should be a numeric value denoting when
 the sample was collected (typically the number of days since the start of
 the study). The `subject` column should be a subject identifier for the
-person who contributed the sample. If multiple variants are detected at the
+person who contributed the sample. If multiple alleles are detected at the
 same time point for the same person, there should be multiple rows with the
 same `subject` and `time` but different values in `allele`. If some samples
-do not have any sequenced variants (i.e., no infection), rows should be
+do not have any sequenced alleles (i.e., no infection), rows should be
 included with the corresponding `time` and `subject` but `NA` in the `allele`
 column. **If samples without infections are not included, the downstream
 results could be very biased.** If multiple loci are sequenced, the locus
@@ -236,10 +236,9 @@ plot_single_subject(3, dataset, treatments)
 
 In the plot, we see that the ambiguous infection on day 109 has been imputed
 to consist of specific alleles (the opacity `alpha` is equal to the
-proportion of times the allele is imputed to be present). 
-The alleles that occur both before and after day 109 are
-imputed to be present most confidently while those not seen after day 93 are
-less confidently imputed.
+proportion of times the allele is imputed to be present). By default, 10
+imputed datasets are created, but this can be increased up to 50 for better
+precision. Imputing more than 50 datasets is typically unnecessary.
 
 ### Setting up covariates
 
@@ -388,11 +387,11 @@ and should take a few minutes to run. The fit probabilities can also be
 read in from 
 `system.file(package = "dinemites", "extdata", "probabilities_bayesian_mat.tsv")`.
 
-Note: The Bayesian model can be run with `drop_out = TRUE` to allow alleles
+*Note: The Bayesian model can be run with `drop_out = TRUE` to allow alleles
 to be classified as persistent even if they have never been observed before
 due to sequencing drop-out. This is primarily intended for cases in which the
 estimated sequencing drop-out is above 50%, which can be estimated with
-`estimate_drop_out`.
+`estimate_drop_out`.*
 
 ```
 estimate_drop_out(dataset)
@@ -450,6 +449,35 @@ probabilities_clustering_mat <-
 stopCluster(cl)
 ```
 
+#### Runtime
+The following guidelines can help with choosing models that run in reasonable
+amounts of time:
+
+* Imputation: The imputation procedure scales approximately linearly in
+the number of subjects, the number of alleles, and the number of time points
+per subject. It scales approximately exponentially in the parameter `k`, so 
+changing `k` from its default is typically not recommended. Imputing 10 datasets
+for 100 alleles, 200 subjects, and 20 time points per subject should take less
+than 10 minutes, and it is unlikely to be the most computationally intensive
+step.
+* Simple model: The simple model scales linearly with the number of subjects,
+the number of alleles, and the number of time points per subject. It should
+take less than 1 minute (per imputed dataset) for 100 alleles, 200 subjects, 
+and 20 time points per subject, and it is unlikely to be the most 
+computationally intensive step.
+* Bayesian model: The Bayesian model scales linearly with the number of alleles
+and the number of formula variables and up to linearly with the number of
+subjects and the number of time points per subject. It should
+take about an hour (per imputed dataset) for 100 alleles, 200 subjects, 
+20 time points per subject, and 4 formula variables, and it is likely to be the
+most computationally intensive step. Running imputed datasets in parallel is 
+strongly recommended, and filtering out rare alleles can help substantially.
+* Clustering model: The clustering model scales linearly with the number of 
+subjects, the number of alleles, and the number of time points per subject. It 
+should take less than 5 minutes (per imputed dataset) for 100 alleles, 200 
+subjects, and 20 time points per subject, and it is unlikely to be the most 
+computationally intensive step.
+
 ## Analyzing results
 
 ### Merging probabilities
@@ -486,14 +514,15 @@ dataset <- merge_probability_columns(dataset,
     threshold = 0.3)
 ```
 
-### New complexity of infection
+### Molecular force of infection
 
-The complexity of infection (COI) is the number of genetically unique
-parasite variants detected.
-Typically, the estimated new infections and/or the total new COI are the
+The molecular force of infection (molFOI) is the number of genetically unique
+parasite strains detected (counted multiple times if they are new multiple
+times).
+Typically, the estimated new infections and/or the molFOI are the
 key outcomes of interest from a study using this type of data.
 
-When only one locus is sequenced, the COI is 
+When only one locus is sequenced, the molecular force of infection is 
 simply 
 estimated by the sum of: for each allele, the probability the allele is new 
 multiplied by the probability the allele is present (1 if sequenced and 
@@ -518,25 +547,26 @@ if different infections have different diversities at the different loci,
 the different infections are all counted in full. Typically, `max_then_sum`
 should only be used if the sequencing is very accurate (<20\% drop-out). 
 
-These can be specified as `method` in `compute_total_new_COI`:
+These can be specified as `method` in `compute_molFOI`:
 
 ```
-compute_total_new_COI(dataset, method = 'sum_then_max') %>%
+compute_molFOI(dataset, method = 'sum_then_max') %>%
     knitr::kable() %>%
     kableExtra::scroll_box(height = "200px", extra_css = "border: none;") %>%
     kableExtra::kable_styling("striped", full_width = F, position = 'center')
 ```
 
-*Note: The total new COI is computed from the probability each allele is
+*Note: The molFOI is computed from the probability each allele is
 present and new, averaged over the imputed datasets if necessary. Therefore,
 manually merging probabilities (e.g., [Merging probabilities](#merging-probabilities))
-after running `add_probability_new` will affect the total new COI.*
+after running `add_probability_new` will affect the molFOI.*
 
 ### New infections
 
 Additionally, the number of new infections can be estimated based on the
 sequencing data. The number of new infections is estimated by counting
-the number of peaks in the pan-locus new COI and then accounting for the
+the number of peaks in the pan-locus new complexity
+of infection and then accounting for the
 maximum and minimum novelty throughout the peaks. Sometimes, the estimated
 new infections might appear unexpectedly high, but this is typically because
 there are many time points with moderate-low probabilities of new infections
@@ -566,7 +596,9 @@ matrix, and `estimated_new_infections` can then be run.*
 ### Data visualization
 
 The results can be visualized for an individual subject with 
-`plot_single_subject` or for all subjects with `plot_dataset`. The function
+`plot_single_subject` or for all subjects with `plot_dataset`. Supplying the
+`treatments` and `estimated_new_infections` data frames will display
+these on the plots. The function
 `plot_dataset` also shows the prevalence of each allele (proportion of 
 sequencing-positive samples in which the allele was present) to the right. As
 before, red lines indicate qPCR-only time points, and blue lines indicate 

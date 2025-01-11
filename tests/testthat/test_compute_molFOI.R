@@ -13,8 +13,8 @@ dataset <- fill_in_dataset(dataset_in)
 dataset$probability_new <-
     determine_probabilities_simple(dataset)$probability_new
 
-expect_that(unname(unlist(compute_total_new_COI(dataset, method = 'sum_then_max')[,'new_COI'])),
+expect_that(unname(unlist(compute_molFOI(dataset, method = 'sum_then_max')[,'molFOI'])),
             equals(2))
 
-expect_that(unname(unlist(compute_total_new_COI(dataset, method = 'max_then_sum')[,'new_COI'])),
+expect_that(unname(unlist(compute_molFOI(dataset, method = 'max_then_sum')[,'molFOI'])),
             equals(3))

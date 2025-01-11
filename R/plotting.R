@@ -173,7 +173,7 @@ plot_single_subject <- function(subject,
             ungroup()
 
         if ("probability_new" %in% colnames(tmp_df)) {
-            tmp_df_new_COI <- tmp_df %>%
+            tmp_df_molFOI <- tmp_df %>%
                 dplyr::group_by(.data$time) %>%
                 dplyr::summarise(total_new =
                     sum((.data$probability_present * .data$probability_new)[
@@ -181,7 +181,7 @@ plot_single_subject <- function(subject,
                     .groups = "drop") %>%
                 dplyr::filter(!is.na(.data$total_new))
 
-            p1 <- ggplot(tmp_df_new_COI,
+            p1 <- ggplot(tmp_df_molFOI,
                          aes(x = .data$time,
                              y = .data$total_new)) +
                 geom_vline(xintercept = unique(time_points),
@@ -226,7 +226,7 @@ plot_single_subject <- function(subject,
                           element_rect(fill = "gray90", color = NA),
                       panel.grid.major = element_blank())
 
-            if (max(tmp_df_new_COI$total_new, na.rm=T) < 1) {
+            if (max(tmp_df_molFOI$total_new, na.rm=T) < 1) {
                 p1 <- p1 + scale_y_continuous(limits = c(0,1), breaks = c(0,1))
             } else {
                 p1 <- p1 + scale_y_continuous(limits = c(0, NA))
@@ -333,31 +333,45 @@ plot_single_subject <- function(subject,
         }
 
         if ("probability_new" %in% colnames(tmp_df)) {
-            plot_out <- patchwork::wrap_plots(
-                p1,
-                p2,
-                ggplot(data.frame(l = "Prevalence", x = 1, y = 1)) +
-                    geom_text(aes(x, y, label = l), angle = 270) +
-                    theme_void() +
-                    coord_cartesian(clip = "off"),
-                design = c(patchwork::area(1, 1),
-                           patchwork::area(2, 1),
-                           patchwork::area(2, 2, 2, 2)),
-                heights = c(1, 5), widths = c(19, 1),
-                axes = 'collect_x'
-            )
+            if ('prevalence' %in% colnames(tmp_df)) {
+                plot_out <- patchwork::wrap_plots(
+                    p1,
+                    p2,
+                    ggplot(data.frame(l = "Prevalence", x = 1, y = 1)) +
+                        geom_text(aes(x, y, label = l), angle = 270) +
+                        theme_void() +
+                        coord_cartesian(clip = "off"),
+                    design = c(patchwork::area(1, 1),
+                               patchwork::area(2, 1),
+                               patchwork::area(2, 2, 2, 2)),
+                    heights = c(1, 5), widths = c(19, 1),
+                    axes = 'collect_x'
+                )
+            } else {
+                plot_out <- patchwork::wrap_plots(
+                    p1,
+                    p2,
+                    nrow = 2,
+                    heights = c(1, 5),
+                    axes = 'collect_x'
+                )
+            }
         } else {
-            plot_out <- patchwork::wrap_plots(
-                p2,
-                ggplot(data.frame(l = "Prevalence", x = 1, y = 1)) +
-                    geom_text(aes(x, y, label = l), angle = 270) +
-                    theme_void() +
-                    coord_cartesian(clip = "off"),
-                design = c(patchwork::area(1, 1),
-                           patchwork::area(1, 2, 1, 2)),
-                heights = c(1, 5), widths = c(19, 1),
-                axes = 'collect_x'
-            )
+            if ('prevalence' %in% colnames(tmp_df)) {
+                plot_out <- patchwork::wrap_plots(
+                    p2,
+                    ggplot(data.frame(l = "Prevalence", x = 1, y = 1)) +
+                        geom_text(aes(x, y, label = l), angle = 270) +
+                        theme_void() +
+                        coord_cartesian(clip = "off"),
+                    design = c(patchwork::area(1, 1),
+                               patchwork::area(1, 2, 1, 2)),
+                    widths = c(19, 1),
+                    axes = 'collect_x'
+                )
+            } else {
+                plot_out <- p2
+            }
         }
 
         if (!is.null(output)) {
