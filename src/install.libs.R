@@ -36,11 +36,11 @@ tryCatch({
         stderr = "2>&1"
     )
 }, error = function(e) {
-    cpp_options <- list(
-        "CXXFLAGS+= -fPIC"
-    )
     callr::r(
         func = function(bin_stan) {
+            cpp_options <- list(
+                "CXXFLAGS+= -fPIC"
+            )
             instantiate::stan_package_compile(
                 models = instantiate::stan_package_model_files(path = bin_stan),
                 cpp_options = cpp_options
