@@ -160,7 +160,7 @@ and time and adding a `present` column that is 0 or 1 depending on whether
 the allele was absent or present:
 
 ```
-dataset <- fill_in_dataset(dataset)
+dataset_filled_in <- fill_in_dataset(dataset)
 ```
 
 #### qPCR only input
@@ -188,7 +188,7 @@ These qPCR-only time points are then added to the dataset, where
 they replace the `present` values for all alleles at the corresponding
 subject time with the value `2`.
 ```
-dataset <- add_qpcr_times(dataset, qpcr_times = qPCR_only)
+dataset_with_qPCR <- add_qpcr_times(dataset_filled_in, qpcr_times = qPCR_only)
 ```
 
 #### Treatments
@@ -213,7 +213,7 @@ indicates that a qPCR-only infection occurred on day 109, and the blue line
 indicates that the person received treatment on day 140.
 
 ```
-plot_single_subject(3, dataset, treatments)
+plot_single_subject(3, dataset_with_qPCR, treatments)
 ```
 ![](inst/extdata/pngs/no_imputation.png)
 
@@ -235,12 +235,12 @@ the probability each allele was present based on the imputations.
 set.seed(1)
 n_imputations <- 10
 
-imputed_datasets <- impute_dataset(dataset, 
+imputed_datasets <- impute_dataset(dataset_with_qPCR, 
                                    n_imputations = n_imputations, 
                                    verbose = FALSE)
 
-dataset <- add_probability_present(dataset, imputed_datasets)
-plot_single_subject(3, dataset, treatments)
+dataset_after_imputation <- add_probability_present(dataset_with_qPCR, imputed_datasets)
+plot_single_subject(3, dataset_after_imputation, treatments)
 ```
 ![](inst/extdata/pngs/with_imputation.png)
 
@@ -317,7 +317,7 @@ registerDoParallel(cl)
 datasets <- foreach(i = 1:n_imputations, 
                     .packages = c('dinemites', 'dplyr')) %dopar% {
     # Copy original dataset and use the ith imputed vaules
-    dataset_tmp <- dataset
+    dataset_tmp <- dataset_after_imputation
     dataset_tmp$present <- imputed_datasets[,i]
 
     # Add all covariates for that imputed dataset
@@ -497,11 +497,11 @@ First, we will add the probabilities to the dataset with the function
 to add are valid and then adds on the (average) probability of the allele being
 new (given that it is present, if using imputations):
 ```
-dataset <- add_probability_new(dataset, 
+dataset_with_clustering <- add_probability_new(dataset_after_imputation, 
                                probabilities_clustering_mat, 
                                'probability_clustering')
 
-dataset <- add_probability_new(dataset, 
+dataset_with_bayesian <- add_probability_new(dataset_with_clustering, 
                                probabilities_bayesian_mat, 
                                'probability_bayesian')
 ```
@@ -519,7 +519,7 @@ try this, copy the chunk with `merge_probability_columns` into the console
 and run it.
 
 ```
-dataset <- merge_probability_columns(dataset, 
+dataset_with_probability_new <- merge_probability_columns(dataset_with_bayesian, 
     c('probability_clustering', 'probability_bayesian'), 
     threshold = 0.3)
 ```
@@ -560,7 +560,7 @@ should only be used if the sequencing is very accurate (<20\% drop-out).
 These can be specified as `method` in `compute_molFOI`:
 
 ```
-compute_molFOI(dataset, method = 'sum_then_max') %>%
+compute_molFOI(dataset_with_probability_new, method = 'sum_then_max') %>%
     knitr::kable() %>%
     kableExtra::scroll_box(height = "200px", extra_css = "border: none;") %>%
     kableExtra::kable_styling("striped", full_width = F, position = 'center')
@@ -586,7 +586,7 @@ the matrix of imputed values and the matrix of determined probabilities since
 it estimates the new infections from each imputed dataset.
 
 ```
-estimated_new_infections <- estimate_new_infections(dataset, 
+estimated_new_infections <- estimate_new_infections(dataset_with_probability_new, 
                         imputation_mat = imputed_datasets, 
                         probability_mat = probabilities_bayesian_mat) 
 
@@ -618,7 +618,9 @@ are not annotated, the probabilities are >80\% or <20\% respectively, and all
 other dots are annotated with their probabilities of being new.
 
 ```
-all_plots <- plot_dataset(dataset, treatments, output = 'output')
+all_plots <- plot_dataset(dataset_with_probability_new, 
+                            treatments, 
+                            output = 'output')
 print(all_plots[[3]])
 ```
 

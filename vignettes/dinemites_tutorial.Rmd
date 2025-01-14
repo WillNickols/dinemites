@@ -184,11 +184,11 @@ and time and adding a `present` column that is 0 or 1 depending on whether
 the allele was absent or present:
 
 ```{r}
-dataset <- fill_in_dataset(dataset)
+dataset_filled_in <- fill_in_dataset(dataset)
 ```
 
 ```{r, echo=F}
-head(dataset, 100) %>%
+head(dataset_filled_in, 100) %>%
     knitr::kable() %>%
     kableExtra::scroll_box(height = "200px", extra_css = "border: none;") %>%
     kableExtra::kable_styling("striped", full_width = F, position = 'center')
@@ -226,11 +226,11 @@ These qPCR-only time points are then added to the dataset, where
 they replace the `present` values for all alleles at the corresponding
 subject time with the value `2`.
 ```{r}
-dataset <- add_qpcr_times(dataset, qpcr_times = qPCR_only)
+dataset_with_qPCR <- add_qpcr_times(dataset_filled_in, qpcr_times = qPCR_only)
 ```
 
 ```{r, echo=F}
-dataset %>%
+dataset_with_qPCR %>%
     filter(present == 2) %>%
     head(n = 6) %>%
     knitr::kable() %>%
@@ -267,7 +267,7 @@ indicates that a qPCR-only infection occurred on day 109, and the blue line
 indicates that the person received treatment on day 140.
 
 ```{r, fig.align='center', fig.width=7, fig.height=4}
-plot_single_subject(3, dataset, treatments)
+plot_single_subject(3, dataset_with_qPCR, treatments)
 ```
 
 ### 3.2 Imputing qPCR only time points {#imputing-qpcr-only-time-points}
@@ -289,7 +289,7 @@ set.seed(1)
 n_imputations <- 10
 
 if (instantiate::stan_cmdstan_exists()) {
-    imputed_datasets <- impute_dataset(dataset, 
+    imputed_datasets <- impute_dataset(dataset_with_qPCR, 
                                    n_imputations = n_imputations, 
                                    verbose = FALSE)
 } else {
@@ -300,8 +300,8 @@ if (instantiate::stan_cmdstan_exists()) {
         sep="\t")
 }
 
-dataset <- add_probability_present(dataset, imputed_datasets)
-plot_single_subject(3, dataset, treatments)
+dataset_after_imputation <- add_probability_present(dataset_with_qPCR, imputed_datasets)
+plot_single_subject(3, dataset_after_imputation, treatments)
 ```
 
 In the plot, we see that the ambiguous infection on day 109 has been imputed
@@ -377,7 +377,7 @@ registerDoParallel(cl)
 datasets <- foreach(i = 1:n_imputations, 
                     .packages = c('dinemites', 'dplyr')) %dopar% {
     # Copy original dataset and use the ith imputed vaules
-    dataset_tmp <- dataset
+    dataset_tmp <- dataset_after_imputation
     dataset_tmp$present <- imputed_datasets[,i]
 
     # Add all covariates for that imputed dataset
@@ -574,11 +574,11 @@ First, we will add the probabilities to the dataset with the function
 to add are valid and then adds on the (average) probability of the allele being
 new (given that it is present, if using imputations):
 ```{r}
-dataset <- add_probability_new(dataset, 
+dataset_with_clustering <- add_probability_new(dataset_after_imputation, 
                                probabilities_clustering_mat, 
                                'probability_clustering')
 
-dataset <- add_probability_new(dataset, 
+dataset_with_bayesian <- add_probability_new(dataset_with_clustering, 
                                probabilities_bayesian_mat, 
                                'probability_bayesian')
 ```
@@ -596,11 +596,12 @@ try this, copy the chunk with `merge_probability_columns` into the console
 and run it.
 
 ```{r}
-dataset <- dataset %>% dplyr::mutate(probability_new = probability_bayesian)
+dataset_with_probability_new <- dataset_with_bayesian %>% 
+    dplyr::mutate(probability_new = probability_bayesian)
 ```
 
 ```{r, eval = FALSE}
-dataset <- merge_probability_columns(dataset, 
+dataset_with_probability_new <- merge_probability_columns(dataset_with_bayesian, 
     c('probability_clustering', 'probability_bayesian'), 
     threshold = 0.3)
 ```
@@ -641,7 +642,7 @@ should only be used if the sequencing is very accurate (<20\% drop-out).
 These can be specified as `method` in `compute_molFOI`:
 
 ```{r}
-compute_molFOI(dataset, method = 'sum_then_max') %>%
+compute_molFOI(dataset_with_probability_new, method = 'sum_then_max') %>%
     knitr::kable() %>%
     kableExtra::scroll_box(height = "200px", extra_css = "border: none;") %>%
     kableExtra::kable_styling("striped", full_width = F, position = 'center')
@@ -667,7 +668,7 @@ the matrix of imputed values and the matrix of determined probabilities since
 it estimates the new infections from each imputed dataset.
 
 ```{r}
-estimated_new_infections <- estimate_new_infections(dataset, 
+estimated_new_infections <- estimate_new_infections(dataset_with_probability_new, 
                         imputation_mat = imputed_datasets, 
                         probability_mat = probabilities_bayesian_mat) 
 
@@ -699,7 +700,7 @@ are not annotated, the probabilities are >80\% or <20\% respectively, and all
 other dots are annotated with their probabilities of being new.
 
 ```{r, fig.align='center', fig.width=8, fig.height=4, message=FALSE}
-all_plots <- plot_dataset(dataset, 
+all_plots <- plot_dataset(dataset_with_probability_new, 
                           treatments, 
                           estimated_new_infections,
                           output = 'output')
