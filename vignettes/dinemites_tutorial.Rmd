@@ -678,7 +678,7 @@ it estimates the new infections from each imputed dataset.
 ```{r}
 estimated_new_infections <- estimate_new_infections(dataset_with_probability_new, 
                         imputation_mat = imputed_datasets, 
-                        probability_mat = probabilities_bayesian_mat) 
+                        probability_mat = probabilities_bayesian_mat)
 
 data.frame(subject = rownames(estimated_new_infections),
            new_infections = rowMeans(estimated_new_infections)) %>%

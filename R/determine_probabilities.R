@@ -1,5 +1,5 @@
 inv_logit <- function(x) {
-    return(exp(x) / (1 + exp(x)))
+    return(ifelse(x > 700, 1, exp(x) / (1 + exp(x))))
 }
 
 #' determine_probabilities_simple
