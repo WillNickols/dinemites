@@ -24,7 +24,7 @@ multiple times.
 
 If you use the DINEMITES software, please cite our work:
 
-> William A. Nickols, Philipp Schwalb, Daniel Neafsey. In progress:
+> William A. Nickols, Philipp Schwabl, Daniel Neafsey. In progress:
 Statistical models distinguish new malaria infections in time series sequencing
 data.
 
@@ -609,7 +609,6 @@ dataset_with_probability_new <- dataset_with_bayesian %>%
 ```
 
 ```{r, eval = FALSE}
-dataset_with_probability_new$probability_new <- NULL
 dataset_with_probability_new <- merge_probability_columns(dataset_with_bayesian, 
     c('probability_clustering', 'probability_bayesian'), 
     threshold = 0.3)

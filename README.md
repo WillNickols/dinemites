@@ -14,7 +14,7 @@ multiple times.
 
 If you use the DINEMITES software, please cite our work:
 
-> William A. Nickols, Philipp Schwalb, Daniel Neafsey. In progress:
+> William A. Nickols, Philipp Schwabl, Daniel Neafsey. In progress:
 Statistical models distinguish new malaria infections in time series sequencing
 data.
 
