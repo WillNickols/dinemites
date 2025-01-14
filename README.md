@@ -117,6 +117,14 @@ devtools::install_github("WillNickols/dinemites", build_vignettes = TRUE,
 browseVignettes('dinemites')
 ```
 
+On some computing spaces, security requirements might cause the installation
+to fail with an error involving `-fPIE` or `-fPIC`. If this happens, rebuild
+`cmdstan` with the necessary flags and then try installing again.
+```
+cmdstanr::cmdstan_make_local(cpp_options = list("CXXFLAGS+= -fPIE"))
+cmdstanr::rebuild_cmdstan()
+```
+
 ## Distinguishing new infections
 
 ### DINEMITES input
