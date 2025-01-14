@@ -412,7 +412,7 @@ estimated sequencing drop-out is above 50%, which can be estimated with
 `estimate_drop_out`.*
 
 ```
-estimate_drop_out(dataset)
+estimate_drop_out(dataset_after_imputation)
 
 n_cores <- ifelse(detectCores() > 1, 2, 1)
 cl <- makeCluster(n_cores)
