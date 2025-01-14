@@ -264,7 +264,7 @@ count_new_infections <- function(total_new, max_new, min_new) {
 #' estimate_new_infections
 #'
 #' Compute the total new infection events for each subject by identifying
-#' peaks in the pan-locus new COI.
+#' peaks in the pan-locus new alleles.
 #'
 #' @export
 #' @param dataset A complete longitudinal dataset with columns `allele`,

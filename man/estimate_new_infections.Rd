@@ -27,7 +27,7 @@ imputations).
 }
 \description{
 Compute the total new infection events for each subject by identifying
-peaks in the pan-locus new COI.
+peaks in the pan-locus new alleles.
 }
 \examples{
 

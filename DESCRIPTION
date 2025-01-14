@@ -12,8 +12,7 @@ RoxygenNote: 7.3.2
 Biarch: true
 Depends: 
     R (>= 3.4.0)
-Imports: 
-    dplyr, linkcomm, purrr, reshape2, tidyr, posterior, instantiate, foreach, doParallel, ggplot2, parallel, ggnewscale, ggrepel, patchwork, plyr, doRNG
+Imports: plyr, dplyr, linkcomm, purrr, reshape2, tidyr, posterior, instantiate, foreach, doParallel, ggplot2, parallel, ggnewscale, ggrepel, patchwork, doRNG
 Suggests: knitr, testthat (>= 2.1.0), rmarkdown, markdown, kableExtra
 VignetteBuilder: knitr
 LinkingTo: 

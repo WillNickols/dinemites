@@ -206,7 +206,7 @@ plot_single_subject <- function(subject,
                                               max(time_points) * 1.1)) +
                 theme_bw() +
                 labs(x = "Day",
-                     y = "Pan-locus\nNew COI",
+                     y = "Pan-locus\nNew Alleles",
                      title = paste0("Subject: ",
                         subject,
                         ifelse(is.na(new_infections),
@@ -338,7 +338,8 @@ plot_single_subject <- function(subject,
                     p1,
                     p2,
                     ggplot(data.frame(l = "Prevalence", x = 1, y = 1)) +
-                        geom_text(aes(x, y, label = l), angle = 270) +
+                        geom_text(aes(.data$x, .data$y, label = .data$l),
+                                  angle = 270) +
                         theme_void() +
                         coord_cartesian(clip = "off"),
                     design = c(patchwork::area(1, 1),
