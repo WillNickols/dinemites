@@ -50,6 +50,27 @@ merge_probability_columns <- function(dataset, cols_to_merge, threshold = 0.3) {
     dataset$probability_new[
         which(prob_abs_diffs > threshold & !is.na(prob_abs_diffs))] <- NA
 
+    freq_df <- dataset %>%
+        dplyr::group_by(.data$subject, .data$time) %>%
+        dplyr::filter(any(.data$present == 1)) %>%
+        dplyr::ungroup() %>%
+        dplyr::group_by(.data$allele) %>%
+        dplyr::summarise(mean(.data$present == 1),
+                         .groups = "drop")
+
+    colnames(freq_df) <- c("allele", "prevalence")
+
+    freq_table <- freq_df$prevalence
+    names(freq_table) <- freq_df$allele
+
+    dataset <- dataset %>%
+        mutate(prevalence =
+                   paste0(round(freq_table[as.character(.data$allele)] * 100, 1),
+                          "%")) %>%
+        mutate(prevalence =
+                   ifelse(.data$prevalence == 'NA%', "", .data$prevalence)) %>%
+        ungroup()
+
     # Run manual selection
     for (index in which(prob_abs_diffs > threshold & !is.na(prob_abs_diffs))) {
         plot_out <-
@@ -59,7 +80,7 @@ merge_probability_columns <- function(dataset, cols_to_merge, threshold = 0.3) {
         print(plot_out)
         print(dataset[index,])
         read_val <- readline(prompt =
-            paste0("Choose probability: ",
+            paste0("Choose the probability the allele is new: ",
             cols_to_merge[1],
             " (",
             round(dataset[index,cols_to_merge[1]], 3),

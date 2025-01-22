@@ -156,8 +156,8 @@ column. **If samples without infections are not included, the downstream
 results could be very biased.** In general, the visits should be similarly
 spaced for all subjects, but minor violations of this (e.g., unexpected visits) 
 should not be too problematic. If multiple loci are sequenced, the locus
-name of the allele should be included in the `locus` column. Allele names should
-still be unique even across loci. In this data 
+name of the allele should be included in the `locus` column. **Allele names 
+should still be unique even across loci.** In this data 
 frame, other sample-specific information can be included including covariates
 that affect the rate at which a person becomes infected (`season`, LLIN
 usage, etc.).
