@@ -539,8 +539,8 @@ determine_probabilities_clustering <- function(dataset,
         }
         colnames(edges) <- c("allele1", "allele2")
 
-        counts <- as.data.frame(table(apply(edges, 1, paste, collapse = "_")))
-        counts_split <- do.call(rbind, strsplit(as.character(counts$Var1), "_"))
+        counts <- as.data.frame(table(apply(edges, 1, paste, collapse = "_jOiNiNgStRiNg_")))
+        counts_split <- do.call(rbind, strsplit(as.character(counts$Var1), "_jOiNiNgStRiNg_"))
         if (length(counts$Freq) > 0) {
             edges_with_counts <- cbind(counts_split, Freq = counts$Freq)
             colnames(edges_with_counts) <- c(colnames(edges), "Count")
