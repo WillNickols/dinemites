@@ -365,7 +365,7 @@ plot_single_subject <- function(subject,
                     list(
                         p2,
                         ggplot(data.frame(l = "Prevalence", x = 1, y = 1)) +
-                            geom_text(aes(.data$x, .data$y, label = .data$l), angle = 270) +
+                            geom_text(aes(x, y, label = l), angle = 270) +
                             theme_void() +
                             coord_cartesian(clip = "off")
                         ),

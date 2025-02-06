@@ -103,7 +103,7 @@ determine_probabilities_simple <- function(dataset,
 #'
 #' @export
 #' @param dataset A complete longitudinal dataset with columns `allele`,
-#' `subject`, `time`, `time_gap`, and `present.`
+#' `subject`, `time`, and `present.`
 #' @param infection_persistence_covariates A character vector of column names
 #' in the dataset corresponding to covariates that increase only the
 #' probability of an infection being present due to a persistent infection.
@@ -143,10 +143,10 @@ determine_probabilities_bayesian <- function(dataset,
                                     adapt_delta = 0.99,
                                     seed = 1,
                                     drop_out = FALSE) {
-    if (any(!c("allele", "subject", "time", "time_gap", "present") %in%
+    if (any(!c("allele", "subject", "time", "present") %in%
             colnames(dataset))) {
         stop("dataset must contain the columns:
-             allele, subject, time, time_gap, present")
+             allele, subject, time, present")
     }
 
     check_alleles_unique_across_loci(dataset)
@@ -161,10 +161,6 @@ determine_probabilities_bayesian <- function(dataset,
         stop("infection_persistence_covariates columns must be numeric")
     }
 
-    if (length(infection_persistence_covariates) == 0) {
-        stop("At least one infection_persistence_covariates must be provided")
-    }
-
     if (!is.null(infection_general_covariates) &&
         !is.numeric(c(unlist(dataset[infection_general_covariates])))) {
         stop("infection_general_covariates columns must be numeric")
@@ -173,11 +169,6 @@ determine_probabilities_bayesian <- function(dataset,
     if (!is.null(alleles_persistence_covariates) &&
         !is.numeric(c(unlist(dataset[alleles_persistence_covariates])))) {
         stop("alleles_persistence_covariates columns must be numeric")
-    }
-
-    if (any(is.infinite(dataset$time_gap))) {
-        stop(paste0("time_gap must not be infinite, consider dropping first ",
-        "time points if their infections are ambiguous"))
     }
 
     dataset <- dataset %>%
@@ -209,7 +200,7 @@ determine_probabilities_bayesian <- function(dataset,
 
     # Check for possible speed-up from grouping observations
     columns_for_reducing <-
-        c("allele", "present", "present_infection", "time_gap",
+        c("allele", "present", "present_infection",
           infection_general_covariates,
           infection_persistence_covariates,
           alleles_persistence_covariates)
@@ -259,7 +250,6 @@ determine_probabilities_bayesian <- function(dataset,
     J <- length(unique(dataset_reduced$allele))
 
     group <- as.numeric(dataset_reduced$allele)
-    time_gap <- dataset_reduced$time_gap
 
     z <- dataset_reduced$present_infection
     y <- dataset_reduced$present
@@ -276,7 +266,6 @@ determine_probabilities_bayesian <- function(dataset,
         X_infection_persistent = X_infection_persistent,
         X_alleles_persistent = X_alleles_persistent,
         group = group,
-        t_gap = time_gap,
         z = z,
         y = y,
         w = w
@@ -341,35 +330,44 @@ determine_probabilities_bayesian <- function(dataset,
                                 colnames(output_draws))]))
             }
         }
-        p_new_infection[row_num,] <- 1 - exp(-dataset_reduced$time_gap * exp(mm %*% coefs))
+        p_new_infection[row_num,] <- inv_logit(mm %*% coefs)
+    }
+
+    # p_any_infection
+    mm <- model.matrix(
+        as.formula(paste0(c("present ~ 1 + ",
+            c(infection_persistence_covariates, infection_general_covariates)),
+            collapse = " + ")),
+        dataset_reduced)
+    p_any_infection <- matrix(nrow = nrow(output_draws),
+                              ncol = nrow(dataset_reduced))
+    for (row_num in seq(nrow(output_draws))) {
+        coefs <- output_draws[row_num, "alpha_infection"]
+        if (length(infection_persistence_covariates) > 0) {
+            for (i in 1:length(infection_persistence_covariates)) {
+                coefs <-
+                    c(coefs,
+                      unlist(output_draws[row_num,
+                      grepl(paste0("^beta_infection_persistent\\[", i, "\\]"),
+                            colnames(output_draws))]))
+            }
+        }
+        if (length(infection_general_covariates) > 0) {
+            for (i in 1:length(infection_general_covariates)) {
+                coefs <-
+                    c(coefs,
+                      unlist(output_draws[row_num,
+                      grepl(paste0("^beta_infection_general\\[", i, "\\]"),
+                            colnames(output_draws))]))
+            }
+        }
+
+        p_any_infection[row_num,] <- inv_logit(mm %*% coefs)
     }
 
     # p_old_infection
-    mm <- model.matrix(
-        as.formula(paste0(c("present ~ -1 ",
-            c(infection_persistence_covariates)),
-            collapse = " + ")),
-        dataset_reduced)
-    p_old_infection <- matrix(nrow = nrow(output_draws),
-                              ncol = nrow(dataset_reduced))
-
-    for (row_num in seq(nrow(output_draws))) {
-        coefs <- c()
-        for (i in 1:length(infection_persistence_covariates)) {
-            coefs <-
-                c(coefs,
-                  unlist(output_draws[row_num,
-                                      grepl(paste0("^beta_infection_persistent\\[", i, "\\]"),
-                                            colnames(output_draws))]))
-        }
-        p_old_infection[row_num,] <- inv_logit(mm %*% coefs)
-        p_old_infection[row_num,] <-
-            ifelse(rowSums(abs(
-                dataset_reduced[infection_persistence_covariates])) > 0,
-                p_old_infection[row_num,], 0)
-    }
-
-    p_any_infection = p_new_infection + p_old_infection - p_new_infection * p_old_infection
+    p_old_infection = (p_any_infection - p_new_infection) /
+        (1 - p_new_infection)
 
     # p_allele_if_new
     mm <- model.matrix(

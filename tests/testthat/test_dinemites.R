@@ -55,7 +55,6 @@ if (instantiate::stan_cmdstan_exists()) {
         dataset_tmp$present <- imputed_datasets[,i]
 
         dataset_tmp <- dataset_tmp %>%
-            add_time_gap(default = -14) %>%
             add_present_infection() %>%
             add_persistent_column() %>%
             add_persistent_infection() %>%

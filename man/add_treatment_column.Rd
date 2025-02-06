@@ -52,7 +52,6 @@ treatments <- data.frame(subject = c('A'),
                          time = c(29))
 
 dataset <- fill_in_dataset(dataset_in)
-dataset <- add_time_gap(dataset)
 dataset <- add_present_infection(dataset)
 dataset <- add_persistent_column(dataset)
 dataset <- add_lag_column(dataset)

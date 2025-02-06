@@ -330,9 +330,6 @@ covariates that affect the probability an infection will be observed at a
 given time for a given subject. The following functions add columns of
 covariates for each imputed dataset:
 
-1. `add_time_gap`: Adds the time since the last appointment with the `default`
-changed to `-14` (i.e., infections at the first the time point are counted from 
-day `-14` until day `1`).
 1. `add_present_infection`: Adds an indicator of whether there is an infection
 from any allele.
 2. `add_persistent_column`: Adds an indicator of whether there has been an
@@ -358,7 +355,7 @@ to the intuition that being treated should clear out parasites and therefore
 return the person to having no infections. However, the new columns allow
 the Bayesian model to account for incomplete clearance either shortly after
 or substantially after treatment.
-8. `add_treatment_infection`: Adds indicators of whether there was treatment
+7. `add_treatment_infection`: Adds indicators of whether there was treatment
 for any allele between 1 and 10 days ago (default) for the 
 `treatment_acute_infection` column and 10 or more days ago (default) for the
 `treatment_longitudinal_infection` column. This also sets the 
@@ -393,7 +390,6 @@ datasets <- foreach(i = 1:n_imputations,
 
     # Add all covariates for that imputed dataset
     dataset_tmp <- dataset_tmp %>%
-        add_time_gap(default = -14) %>%
         add_present_infection() %>%
         add_persistent_column() %>%
         add_persistent_infection() %>%

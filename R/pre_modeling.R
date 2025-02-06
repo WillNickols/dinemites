@@ -204,54 +204,6 @@ add_qpcr_times <- function(dataset, qpcr_times) {
     return(dataset)
 }
 
-#' add_time_gap
-#'
-#' Add a column with the time since the last observation. The `default` will
-#' be used to define the `time_gap` for first visits.
-#'
-#' @export
-#' @param dataset A complete longitudinal dataset with columns `allele`,
-#' `subject`, `time`, and `present`.
-#' @param default The reference time against which the first time point
-#' is compared
-#' @return The dataset with a new column `time_gap` indicating
-#' the time since the last observation.
-#' @examples
-#'
-#' dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
-#'     subject = rep('A', 5),
-#'     time = c(1, 1, 2, 3, 4))
-#'
-#' dataset <- fill_in_dataset(dataset_in)
-#' dataset <- add_time_gap(dataset)
-#'
-#' @import dplyr
-add_time_gap <- function(dataset, default = NA) {
-    if (any(!c("allele", "subject", "time", "present") %in%
-            colnames(dataset))) {
-        stop("dataset must contain the columns:
-             allele, subject, time, present")
-    }
-
-    if ('time_gap' %in% colnames(dataset)) {
-        stop("time_gap should not be a column of the input dataset")
-    }
-
-    check_alleles_unique_across_loci(dataset)
-    check_alleles_same_across_subject_times(dataset)
-
-    dataset <- dataset %>%
-        dplyr::mutate(original_row_ordering = seq(nrow(dataset))) %>%
-        dplyr::group_by(.data$subject, .data$allele) %>%
-        dplyr::arrange(.data$time) %>%
-        dplyr::mutate(time_gap = .data$time - lag(.data$time, 1, default = default)) %>%
-        dplyr::ungroup() %>%
-        dplyr::arrange(.data$original_row_ordering) %>%
-        dplyr::select(-.data$original_row_ordering)
-
-    return(dataset)
-}
-
 #' add_present_infection
 #'
 #' Add a column with an indicator of whether an infection is present at the
@@ -259,7 +211,7 @@ add_time_gap <- function(dataset, default = NA) {
 #'
 #' @export
 #' @param dataset A complete longitudinal dataset with columns `allele`,
-#' `subject`, `time`, and `present`.
+#' `subject`, `time`, and `present.`
 #' @return The dataset with a new column `present_infection` (0/1) indicating
 #' whether an infection is present at the time.
 #' @examples
@@ -269,7 +221,6 @@ add_time_gap <- function(dataset, default = NA) {
 #'     time = c(1, 1, 2, 3, 4))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
-#' dataset <- add_time_gap(dataset)
 #' dataset <- add_present_infection(dataset)
 #'
 #' @import dplyr
@@ -303,7 +254,7 @@ add_present_infection <- function(dataset) {
 #'
 #' @export
 #' @param dataset A complete longitudinal dataset with columns `allele`,
-#' `subject`, `time`, and `present`.
+#' `subject`, `time`, and `present.`
 #' @return The dataset with a new column `persistent` (0/1) indicating whether
 #' the allele has been observed before.
 #' @examples
@@ -313,7 +264,6 @@ add_present_infection <- function(dataset) {
 #'     time = c(1, 1, 2, 3, 4))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
-#' dataset <- add_time_gap(dataset)
 #' dataset <- add_present_infection(dataset)
 #' dataset <- add_persistent_column(dataset)
 #'
@@ -358,7 +308,6 @@ add_persistent_column <- function(dataset) {
 #'     time = c(1, 1, 2, 3, 4))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
-#' dataset <- add_time_gap(dataset)
 #' dataset <- add_present_infection(dataset)
 #' dataset <- add_persistent_infection(dataset)
 #'
@@ -407,7 +356,6 @@ add_persistent_infection <- function(dataset) {
 #'     time = c(1, 1, 14, 28, 42))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
-#' dataset <- add_time_gap(dataset)
 #' dataset <- add_present_infection(dataset)
 #' dataset <- add_lag_column(dataset)
 #'
@@ -466,7 +414,6 @@ add_lag_column <- function(dataset, lag_time = 30) {
 #'     time = c(1, 1, 14, 28, 42))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
-#' dataset <- add_time_gap(dataset)
 #' dataset <- add_present_infection(dataset)
 #' dataset <- add_lag_infection(dataset)
 #'
@@ -541,7 +488,6 @@ add_lag_infection <- function(dataset, lag_time = 30) {
 #'                          time = c(29))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
-#' dataset <- add_time_gap(dataset)
 #' dataset <- add_present_infection(dataset)
 #' dataset <- add_persistent_column(dataset)
 #' dataset <- add_lag_column(dataset)
@@ -701,7 +647,6 @@ add_treatment_column <- function(dataset,
 #'                          time = c(29))
 #'
 #' dataset <- fill_in_dataset(dataset_in)
-#' dataset <- add_time_gap(dataset)
 #' dataset <- add_present_infection(dataset)
 #' dataset <- add_persistent_column(dataset)
 #' dataset <- add_lag_column(dataset)
