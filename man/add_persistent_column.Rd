@@ -8,7 +8,7 @@ add_persistent_column(dataset)
 }
 \arguments{
 \item{dataset}{A complete longitudinal dataset with columns \code{allele},
-\code{subject}, \code{time}, and \code{present.}}
+\code{subject}, \code{time}, and \code{present}.}
 }
 \value{
 The dataset with a new column \code{persistent} (0/1) indicating whether
@@ -25,6 +25,7 @@ dataset_in <- data.frame(allele = c('A', 'B', NA, NA, NA),
     time = c(1, 1, 2, 3, 4))
 
 dataset <- fill_in_dataset(dataset_in)
+dataset <- add_time_gap(dataset)
 dataset <- add_present_infection(dataset)
 dataset <- add_persistent_column(dataset)
 

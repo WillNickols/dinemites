@@ -21,7 +21,7 @@ determine_probabilities_bayesian(
 }
 \arguments{
 \item{dataset}{A complete longitudinal dataset with columns \code{allele},
-\code{subject}, \code{time}, and \code{present.}}
+\code{subject}, \code{time}, \code{time_gap}, and \code{present.}}
 
 \item{infection_persistence_covariates}{A character vector of column names
 in the dataset corresponding to covariates that increase only the
