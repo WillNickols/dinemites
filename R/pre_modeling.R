@@ -577,7 +577,7 @@ add_treatment_column <- function(dataset,
                         # treatment + treatment_longitudinal_start
                         recent_present <-
                             max(dataset_tmp_2$time[
-                                dataset_tmp_2$present_infection == 1 &
+                                dataset_tmp_2$present == 1 &
                                     dataset_tmp_2$time < current_time], -Inf)
                         treatment_longitudinal[time_tmp] <-
                             ifelse(current_time - recent_treatment >=
@@ -600,7 +600,8 @@ add_treatment_column <- function(dataset,
 
         dataset_tmp_1[dataset_tmp_1$treatment_acute == 1 |
                           dataset_tmp_1$treatment_longitudinal == 1,
-                      grepl("^lag_", colnames(dataset_tmp_1)) |
+                      (grepl("^lag_", colnames(dataset_tmp_1)) &
+                           !grepl("infection", colnames(dataset_tmp_1))) |
                           "persistent" == colnames(dataset_tmp_1)] <- 0
         dataset[dataset$subject == subject_current,] <- dataset_tmp_1
     }
