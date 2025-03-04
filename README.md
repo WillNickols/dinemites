@@ -14,9 +14,9 @@ multiple times.
 
 If you use the DINEMITES software, please cite our work:
 
-> William A. Nickols, Philipp Schwabl, Daniel Neafsey. In progress:
-Statistical models distinguish new malaria infections in time series sequencing
-data.
+> Distinguishing new from persistent infections at the strain level using longitudinal genotyping data
+William A. Nickols, Philipp Schwabl, Amadou Niangaly, Sean C. Murphy, Peter D. Crompton, Daniel E. Neafsey
+bioRxiv 2025.02.06.636982; doi: https://doi.org/10.1101/2025.02.06.636982
 
 ### Support ###
 For issues, bugs, or questions, please open an issue at 
