@@ -81,7 +81,7 @@ if (instantiate::stan_cmdstan_exists()) {
     }
 }
 
-if (instantiate::stan_cmdstan_exists()) {
+if (instantiate::stan_cmdstan_exists() && requireNamespace("linkcomm", quietly = TRUE)) {
     probabilities_clustering_mat <-
         foreach(i = 1:n_imputations, .combine = cbind, .packages = c('dinemites', 'dplyr')) %dorng% {
         dataset_tmp <- dataset

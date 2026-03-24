@@ -119,6 +119,9 @@ jobs:
           message(paste('****', Sys.time(), 'installing rcmdcheck ****'))
           install.packages(c("rcmdcheck"))
 
+          ## linkcomm was removed from CRAN; install from archive
+          install.packages("https://cran.r-project.org/src/contrib/Archive/linkcomm/linkcomm_1.0-14.tar.gz", repos = NULL, type = "source")
+
           ## Pass #1 at installing dependencies
           message(paste('****', Sys.time(), 'pass number 1 at installing dependencies: local dependencies ****'))
           remotes::install_local(dependencies = TRUE, repos = c('https://stan-dev.r-universe.dev', getOption("repos")), build_vignettes = FALSE, upgrade = TRUE)
