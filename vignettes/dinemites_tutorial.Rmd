@@ -520,7 +520,7 @@ cluster and each cluster is present at each time point, and uses these to
 calculate the probability an allele is new.
 
 ```{r}
-if (instantiate::stan_cmdstan_exists()) {
+if (instantiate::stan_cmdstan_exists() && requireNamespace("linkcomm", quietly = TRUE)) {
     n_cores <- ifelse(detectCores() > 1, 2, 1)
     cl <- makeCluster(n_cores)
     registerDoParallel(cl)
