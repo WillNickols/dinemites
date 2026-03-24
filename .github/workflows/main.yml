@@ -142,6 +142,7 @@ jobs:
       - name: Run CMD check
         env:
           _R_CHECK_CRAN_INCOMING_: false
+          _R_CHECK_FORCE_SUGGESTS_: false
           DISPLAY: 99.0
         run: |
           options(crayon.enabled = TRUE)
