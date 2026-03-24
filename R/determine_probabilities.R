@@ -558,6 +558,13 @@ determine_probabilities_clustering <- function(dataset,
         edges <- edges_with_counts
 
         if (nrow(edges) > 1) {
+            if (!requireNamespace("linkcomm", quietly = TRUE)) {
+                stop(paste0(
+                    "The 'linkcomm' package is required by ",
+                    "determine_probabilities_clustering() but is not installed. ",
+                    "Install it with: ",
+                    "install.packages('linkcomm', repos = 'https://cran.r-project.org')"))
+            }
             lc <- tryCatch({
                 linkcomm::getLinkCommunities(edges, plot = F, verbose = F)
             }, error = function(e) {
